@@ -1,144 +1,174 @@
-# 📚 StoryTime - AI Story Book Generator
+# 📚 StoryTime - AI-Powered Children's Storybook Generator
 
-Transform your PDF stories into beautiful illustrated children's books using **Gemini 2.5 Flash Image Preview** (nano-banana) - Google's latest AI model for image generation.
+Create beautifully illustrated children's storybooks with custom AI-generated images. StoryTime uses Google's Gemini 2.5 Flash Image Preview to generate consistent character illustrations based on your prompts.
 
 ## ✨ Features
 
-- **PDF Story Processing**: Extract text from PDF files and convert to story pages
-- **Nano-Banana Image Generation**: Use Gemini 2.5 Flash Image Preview for actual image generation
-- **Character Consistency**: Maintain visual consistency by passing character reference image directly
-- **Multiple Art Styles**: Choose from Storybook, Watercolor, Cartoon styles
-- **Professional PDF Output**: Generate print-ready PDF booklets with proper layout
-- **Fail-Fast Architecture**: Clear error messages if image generation fails
-- **Simple Interface**: Clean Streamlit web interface (90 lines total)
+- **Dynamic Page Creation**: Add and remove pages as needed for your story
+- **Custom Illustration Prompts**: Describe exactly what you want to see in each illustration
+- **Character Consistency**: Upload a character photo to maintain visual consistency across all pages
+- **Image-Only PDF Output**: Generate clean PDFs with illustrations only (no text)
+- **Multiple Art Styles**: Choose from storybook, watercolor, or cartoon styles
+- **Character Customization**: Set character name, age, and gender for age-appropriate illustrations
 
-## 🚀 Quick Start
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- Python 3.12+
-- Google API key for Gemini ([Get one here](https://makersuite.google.com/app/apikey))
+- Python 3.12 or higher
+- Google Gemini API key
 
 ### Installation
 
-1. **Clone the repository**
+1. **Clone the repository**:
    ```bash
-   git clone <repository-url>
+   git clone <your-repository-url>
    cd storytime
    ```
 
-2. **Install dependencies**
+2. **Install dependencies**:
    ```bash
-   uv sync
+   pip install -e .
    ```
 
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   # Edit .env and add: GOOGLE_API_KEY=your_google_api_key_here
+3. **Set up your environment**:
+   Create a `.env` file in the project root:
+   ```env
+   GOOGLE_API_KEY=your_google_api_key_here
+   MODEL=gemini-2.5-flash-image-preview
    ```
 
-4. **Run the application**
-   ```bash
-   uv run streamlit run app.py
-   ```
+4. **Get your Google API key**:
+   - Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+   - Create a new API key
+   - Add it to your `.env` file
 
-5. **Open your browser**
-   - Open http://localhost:8501
+### Running the Application
+
+```bash
+streamlit run app.py
+```
+
+The application will open in your browser at `http://localhost:8501`
 
 ## 📖 How to Use
 
-1. **Upload Files**
-   - Upload a PDF containing your story text
-   - Upload a photo of your character (baby/child)
+### 1. Book Settings
+- **Book Title**: Enter the title for your storybook
+- **Character Photo**: Upload an image of your character (JPG, JPEG, or PNG)
+- **Character Name**: Enter the character's name
+- **Age**: Set the character's age (1-12 years)
+- **Gender**: Select Boy or Girl for character consistency
+- **Art Style**: Choose from:
+  - **Storybook**: Classic children's book illustration style
+  - **Watercolor**: Soft, painted watercolor effects
+  - **Cartoon**: Bold, animated cartoon style
 
-2. **Configure Story**
-   - Enter character name and age
-   - Choose art style
-   - Set maximum pages to process
-   - Choose output folder
+### 2. Create Your Story Pages
+- Click **"➕ Add Page"** to add new pages to your story
+- Click **"➖ Remove Page"** to remove the last page
+- For each page, provide:
+  - **Page Title**: A descriptive title for the page
+  - **Story Text**: Context text (helps with illustration but won't appear in PDF)
+  - **Illustration Prompt**: Detailed description of what you want to see in the illustration
 
-3. **Generate**
-   - Click "Generate Storybook"
-   - Watch real-time progress
-   - Download your completed PDF booklet
+### 3. Generate Your Storybook
+- Click **"🎨 Generate Illustrated Storybook"**
+- Wait for the AI to generate illustrations for each page
+- Download your completed PDF storybook
 
-## 🎨 Art Styles
+## 💡 Tips for Better Illustrations
 
-- **📄 Paper Cutout**: Layered paper craft style with clean edges and dimensional depth
-- **⚡ Minimalist**: Simple, clean designs with flat colors and geometric shapes  
-- **🎨 Watercolor**: Soft, flowing colors with gentle brushstrokes and texture
-- **🎭 Cartoon**: Bright, playful illustrations with bold colors and simple shapes
-- **📚 Classic Storybook**: Traditional children's book style with warm, inviting colors
+### Writing Effective Prompts
+- **Be specific**: Instead of "Alex playing", write "Alex playing with a red ball in a sunny park"
+- **Include setting details**: "Alex in a cozy bedroom with toys scattered on the floor"
+- **Describe emotions**: "Alex looking excited and happy while opening a gift"
+- **Add environmental context**: "Alex walking through a magical forest with tall trees and butterflies"
 
-## ⚙️ Configuration
+### Example Prompts
+```
+Page 1: Alex standing at the entrance of a mysterious cave, holding a flashlight, looking curious and adventurous
 
-### Environment Variables
+Page 2: Alex discovering a hidden treasure chest glowing with golden light in the depths of the cave
 
-Create a `.env` file with:
-
-```bash
-# Required
-OPENROUTER_API_KEY=your_api_key_here
+Page 3: Alex running home excitedly through a meadow, carrying a small treasure, with the sun setting behind rolling hills
 ```
 
-## 📁 Clean Project Structure
+## 🛠️ Technical Details
 
+### Dependencies
+- **Streamlit**: Web application framework
+- **Google GenAI**: AI image generation
+- **Pillow**: Image processing
+- **ReportLab**: PDF generation
+- **Pydantic**: Configuration management
+
+### Project Structure
 ```
 storytime/
-├── app.py                 # Main Streamlit app (90 lines)
-├── story_processor.py     # Core processing with nano-banana (180 lines)  
-├── config.py             # Simple Pydantic settings (25 lines)
-├── pyproject.toml        # UV dependencies (minimal)
-├── .env.example          # Environment template
-└── README.md            # This documentation
+├── app.py                 # Main Streamlit application
+├── story_processor.py     # Core image generation and PDF creation logic
+├── config.py             # Configuration settings
+├── pyproject.toml        # Project dependencies and metadata
+├── .env                  # Environment variables (you create this)
+└── README.md            # This file
 ```
 
-## 🔧 Troubleshooting
+### Image Generation Process
+1. **Character Reference**: Uses uploaded character photo for consistency
+2. **Custom Prompts**: Processes your illustration descriptions
+3. **AI Generation**: Calls Google Gemini 2.5 Flash Image Preview
+4. **Style Consistency**: Maintains same art style and character appearance across all pages
+5. **PDF Creation**: Generates image-only PDF with titles
+
+## 🔧 Configuration
+
+### Environment Variables
+- `GOOGLE_API_KEY`: Your Google Gemini API key (required)
+- `MODEL`: Model name (default: `gemini-2.5-flash-image-preview`)
+
+### Supported File Formats
+- **Character Images**: JPG, JPEG, PNG
+- **Output**: PDF
+
+## 🚨 Troubleshooting
 
 ### Common Issues
 
-1. **Missing API Key**
-   - Ensure `GOOGLE_API_KEY` is set in your .env file
-   - Get a valid API key from https://makersuite.google.com/app/apikey
+**"Please set your GOOGLE_API_KEY"**
+- Ensure your `.env` file exists in the project root
+- Verify your API key is valid and active
 
-2. **Image Generation Fails**
-   - App will show clear error: "Image generation not supported with current model"
-   - This is expected behavior - app fails fast instead of creating text-only books
-   - Verify your Google API key has access to Gemini 2.5 Flash Image Preview
+**"Image generation failed"**
+- Check your internet connection
+- Verify your Google API key has sufficient quota
+- Ensure your prompts are appropriate and clear
 
-3. **File Upload Errors**
-   - Ensure PDF contains readable text
-   - Verify image format (JPG, PNG)
+**"No text or words in the illustration"**
+- This is intentional - the app generates image-only PDFs
+- Text context is used for AI understanding but doesn't appear in output
 
-4. **Slow Processing** 
-   - Each image takes 3-5 seconds with nano-banana
-   - Large PDFs take longer to process
-   - Consider reducing max_pages for faster results
+### Performance Tips
+- Shorter illustration prompts may generate faster
+- Complex scenes with many elements may take longer
+- Consider generating 3-5 pages for optimal processing time
+
+## 📝 License
+
+This project is open source. Feel free to modify and distribute as needed.
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Submit a pull request
+4. Test thoroughly
+5. Submit a pull request
 
-## 📄 License
+## 💬 Support
 
-This project is licensed under the MIT License.
-
-## 🙏 Acknowledgments
-
-- OpenRouter for AI model API access
-- Streamlit for the web interface framework
-- ReportLab for PDF generation
-
-## 📞 Support
-
-For issues and questions:
-1. Check this README for common solutions
-2. Open an issue on GitHub
+For issues, questions, or feature requests, please open an issue in the repository.
 
 ---
 
-**StoryTime** - Making every child the hero of their own illustrated adventure! 📚✨
+**Happy storytelling! 📖✨**

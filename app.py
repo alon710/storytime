@@ -1,6 +1,6 @@
 """
 StoryTime - AI-Powered Children's Storybook Generator
-Simple Streamlit app for creating illustrated PDF storybooks
+Streamlit app for creating custom illustrated PDF storybooks with dynamic page creation
 """
 
 import streamlit as st
@@ -22,7 +22,8 @@ def get_version():
 
 
 def main():
-    st.set_page_config(page_title="StoryTime", page_icon="📚")
+    """Main Streamlit application with dynamic page creation interface"""
+    st.set_page_config(page_title="StoryTime", page_icon="📚", layout="wide")
 
     version = get_version()
     st.title("📚 StoryTime")
@@ -37,71 +38,152 @@ def main():
         st.info("You can get an API key from: https://makersuite.google.com/app/apikey")
         st.stop()
 
-    # Simple form
-    with st.form("storybook_form"):
-        # File uploads
-        pdf_file = st.file_uploader("Upload PDF Story", type=["pdf"])
+    # Initialize session state for pages
+    if "pages" not in st.session_state:
+        st.session_state.pages = [
+            {"title": "Page 1", "story_text": "", "illustration_prompt": ""}
+        ]
+
+    # Character and book settings
+    st.header("📖 Book Settings")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        book_title = st.text_input("Book Title", value="My Adventure")
+        character_name = st.text_input("Character Name", value="Alex")
+
+    with col2:
+        character_gender = st.selectbox("Gender", ["Boy", "Girl"])
+        character_age = st.number_input("Age", min_value=1, max_value=12, value=5)
+
+    (column1,) = st.columns(1)
+
+    with column1:
+        art_style = st.selectbox("Art Style", ["storybook", "watercolor", "cartoon"])
         character_image = st.file_uploader(
             "Upload Character Photo", type=["jpg", "jpeg", "png"]
         )
+    st.divider()
 
-        # Settings
-        col1, col2 = st.columns(2)
-        with col1:
-            character_name = st.text_input("Character Name", value="Alex")
-            character_age = st.number_input("Age", min_value=1, max_value=12, value=5)
-        with col2:
-            art_style = st.selectbox(
-                "Art Style", ["storybook", "watercolor", "cartoon"]
+    # Pages management
+    st.header("📄 Story Pages")
+
+    # Add/Remove page buttons
+    (col1, col2) = st.columns(2)
+    with col1:
+        if st.button("➕ Add Page"):
+            page_num = len(st.session_state.pages) + 1
+            st.session_state.pages.append(
+                {
+                    "title": f"Page {page_num}",
+                    "story_text": "",
+                    "illustration_prompt": "",
+                }
             )
-            character_gender = st.selectbox("Gender", ["Boy", "Girl"])
+            st.rerun()
+    with col2:
+        if st.button("➖ Remove Page") and len(st.session_state.pages) > 1:
+            st.session_state.pages.pop()
+            st.rerun()
 
-        # Submit
-        submitted = st.form_submit_button(
-            "Generate Storybook", use_container_width=True
-        )
+    # Display pages
+    for i, page in enumerate(st.session_state.pages):
+        with st.expander(f"📖 {page['title']}", expanded=True):
+            (col1,) = st.columns(1)
 
-    if submitted:
+            with col1:
+                new_title = st.text_input(
+                    "Page Title", value=page["title"], key=f"title_{i}"
+                )
+                new_story_text = st.text_area(
+                    "Story Text (for context)",
+                    value=page["story_text"],
+                    height=100,
+                    help="This text provides context but won't appear in the final PDF",
+                    key=f"story_{i}",
+                )
+
+                new_illustration_prompt = st.text_area(
+                    "Illustration Prompt",
+                    value=page["illustration_prompt"],
+                    height=140,
+                    help="Describe what you want to see in the illustration for this page",
+                    key=f"prompt_{i}",
+                )
+
+            # Update session state
+            st.session_state.pages[i] = {
+                "title": new_title,
+                "story_text": new_story_text,
+                "illustration_prompt": new_illustration_prompt,
+            }
+
+    st.divider()
+
+    # Generate button
+    if st.button(
+        "🎨 Generate Illustrated Storybook", type="primary", use_container_width=True
+    ):
         # Validation
-        if not pdf_file or not character_image or not character_name.strip():
-            st.error("Please provide all required inputs")
-            return
+        missing_fields = []
+        if not character_image:
+            missing_fields.append("Character Photo")
+        if not character_name.strip():
+            missing_fields.append("Character Name")
+        if not book_title.strip():
+            missing_fields.append("Book Title")
 
-        # Use current directory for output
-        output_path = Path.cwd()
+        # Check if all pages have illustration prompts
+        empty_prompts = []
+        for i, page in enumerate(st.session_state.pages):
+            if not page["illustration_prompt"].strip():
+                empty_prompts.append(f"Page {i + 1}")
 
-        # Process
-        with st.spinner("Creating your storybook..."):
-            processor = StoryProcessor()
-            progress_bar = st.progress(0)
+        if missing_fields:
+            st.error(f"Please provide: {', '.join(missing_fields)}")
+        elif empty_prompts:
+            st.error(f"Please add illustration prompts for: {', '.join(empty_prompts)}")
+        else:
+            # Use current directory for output
+            output_path = Path.cwd()
 
-            results = processor.process_story(
-                pdf_file=pdf_file,
-                character_image=character_image,
-                character_name=character_name,
-                character_age=character_age,
-                character_gender=character_gender,
-                art_style=art_style,
-                output_folder=str(output_path),
-                progress_bar=progress_bar,
-            )
+            # Process
+            with st.spinner("Creating your illustrated storybook..."):
+                processor = StoryProcessor()
+                progress_bar = st.progress(0)
 
-            # Results
-            if results["success"]:
-                st.success("🎉 Storybook created!")
-                if results["pdf_path"] and os.path.exists(results["pdf_path"]):
-                    with open(results["pdf_path"], "rb") as file:
-                        pdf_data = file.read()
+                results = processor.process_story(
+                    pages_data=st.session_state.pages,
+                    character_image=character_image,
+                    character_name=character_name,
+                    character_age=character_age,
+                    character_gender=character_gender,
+                    art_style=art_style,
+                    book_title=book_title,
+                    output_folder=str(output_path),
+                    progress_bar=progress_bar,
+                )
 
-                    # Provide download button
-                    st.download_button(
-                        "📥 Download Storybook",
-                        data=pdf_data,
-                        file_name=f"{character_name}_storybook.pdf",
-                        mime="application/pdf",
-                    )
-            else:
-                st.error(f"❌ Failed: {results.get('error', 'Unknown error')}")
+                # Results
+                if results["success"]:
+                    st.success("🎉 Illustrated storybook created!")
+                    if results["pdf_path"] and os.path.exists(results["pdf_path"]):
+                        with open(results["pdf_path"], "rb") as file:
+                            pdf_data = file.read()
+
+                        # Provide download button
+                        st.download_button(
+                            "📥 Download Illustrated Storybook",
+                            data=pdf_data,
+                            file_name=f"{book_title.replace(' ', '_')}_storybook.pdf",
+                            mime="application/pdf",
+                        )
+
+                        st.info(
+                            f"📊 Generated {results['pages_processed']} illustrations in {results['processing_time']:.1f} seconds"
+                        )
+                else:
+                    st.error(f"❌ Failed: {results.get('error', 'Unknown error')}")
 
 
 if __name__ == "__main__":
