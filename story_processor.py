@@ -161,13 +161,14 @@ class StoryProcessor:
                 
                 # Create system prompt for image generation
                 system_prompt = f"""
-                Generate a wordless {art_style} style children's book illustration for this story page without any text or words.
+                Generate a single wordless {art_style} style children's book illustration for this story page without any text or words.
                 
                 Character: {character_name}, age {character_age}
                 Story text: {page_text}
                 
                 Use the character image as reference to maintain visual consistency.
-                Create a warm, child-friendly illustration engaging for ages 2-8.
+                Create one complete illustration scene that is warm and child-friendly, engaging for ages 2-8.
+                Do not create a grid, collage, or multiple panels - generate only one single cohesive image.
                 Do not include any text, letters, or words in the illustration.
                 """
                 
