@@ -5,21 +5,34 @@ Simple Streamlit app for creating illustrated PDF storybooks
 
 import streamlit as st
 import os
+import tomllib
 from pathlib import Path
 from story_processor import StoryProcessor
 from config import settings
 
 
+def get_version():
+    """Get version from pyproject.toml"""
+    try:
+        with open("pyproject.toml", "rb") as f:
+            data = tomllib.load(f)
+            return data["project"]["version"]
+    except Exception:
+        return "Unknown Version"
+
+
 def main():
     st.set_page_config(page_title="StoryTime", page_icon="📚")
 
+    version = get_version()
     st.title("📚 StoryTime")
     st.write("Create AI-Illustrated Children's Storybooks")
+    st.caption(f"Version {version}")
 
     # Check for API key
     try:
         settings.google_api_key
-    except Exception as e:
+    except Exception:
         st.error("⚠️ Please set your GOOGLE_API_KEY in your .env file")
         st.info("You can get an API key from: https://makersuite.google.com/app/apikey")
         st.stop()
@@ -37,12 +50,11 @@ def main():
         with col1:
             character_name = st.text_input("Character Name", value="Alex")
             character_age = st.number_input("Age", min_value=1, max_value=12, value=5)
-            character_gender = st.selectbox("Gender", ["Boy", "Girl"])
         with col2:
             art_style = st.selectbox(
                 "Art Style", ["storybook", "watercolor", "cartoon"]
             )
-            language = st.selectbox("Output Language", ["English", "Hebrew"])
+            character_gender = st.selectbox("Gender", ["Boy", "Girl"])
 
         # Submit
         submitted = st.form_submit_button(
@@ -71,7 +83,6 @@ def main():
                 character_gender=character_gender,
                 art_style=art_style,
                 output_folder=str(output_path),
-                language=language,
                 progress_bar=progress_bar,
             )
 
