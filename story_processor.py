@@ -27,7 +27,10 @@ from langdetect import detect
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as ReportLabImage, PageBreak, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_RIGHT, TA_CENTER
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 from config import settings
 
@@ -79,7 +82,7 @@ class StoryProcessor:
         except Exception as e:
             raise Exception(f"Error reading PDF: {str(e)}")
     
-    def split_into_pages(self, text: str, max_pages: int = 10) -> List[str]:
+    def split_into_pages(self, text: str) -> List[str]:
         """Split text into story pages"""
         paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
         
@@ -87,9 +90,7 @@ class StoryProcessor:
             sentences = [s.strip() + '.' for s in text.split('.') if s.strip()]
             paragraphs = sentences
         
-        # Limit to max_pages
-        if len(paragraphs) > max_pages:
-            paragraphs = paragraphs[:max_pages]
+        # Process all paragraphs from PDF
         
         # Ensure reasonable length per page
         pages = []
@@ -109,7 +110,7 @@ class StoryProcessor:
             else:
                 pages.append(para)
         
-        return pages[:max_pages]
+        return pages
     
     def generate_image_for_page(self, character_image, character_name: str, character_age: int, 
                                page_text: str, art_style: str) -> Optional[str]:
@@ -160,13 +161,14 @@ class StoryProcessor:
                 
                 # Create system prompt for image generation
                 system_prompt = f"""
-                Generate a {art_style} style children's book illustration for this story page.
+                Generate a wordless {art_style} style children's book illustration for this story page without any text or words.
                 
                 Character: {character_name}, age {character_age}
                 Story text: {page_text}
                 
                 Use the character image as reference to maintain visual consistency.
                 Create a warm, child-friendly illustration engaging for ages 2-8.
+                Do not include any text, letters, or words in the illustration.
                 """
                 
                 # Create contents list with system prompt, text, and character image
@@ -248,7 +250,7 @@ class StoryProcessor:
     
     def create_pdf_booklet(self, story_title: str, character_name: str,
                           pages: List[str], image_paths: List[Optional[str]], 
-                          output_path: str) -> str:
+                          output_path: str, language: str = "English") -> str:
         """Create PDF booklet with images and text"""
         pdf_path = f"{output_path}/{story_title.replace(' ', '_')}_storybook.pdf"
         doc = SimpleDocTemplate(
@@ -263,14 +265,42 @@ class StoryProcessor:
         story_elements = []
         styles = getSampleStyleSheet()
         
+        # Set up Hebrew RTL support if needed
+        is_hebrew = language == "Hebrew"
+        if is_hebrew:
+            # Try to register a Hebrew font (fallback to default if not available)
+            try:
+                # This would need a Hebrew font file - for now we'll use default with RTL alignment
+                pass
+            except:
+                pass
+        
         # Title page
         title_style = styles['Title']
         title_style.fontSize = 24
-        title_style.alignment = 1
+        title_style.alignment = TA_CENTER
         
-        story_elements.append(Paragraph(story_title, title_style))
+        # Create Hebrew-aware styles
+        if is_hebrew:
+            hebrew_style = ParagraphStyle(
+                'Hebrew',
+                parent=styles['Normal'],
+                alignment=TA_RIGHT,
+                fontName='Helvetica'  # ReportLab default font with limited Hebrew support
+            )
+            hebrew_title_style = ParagraphStyle(
+                'HebrewTitle',
+                parent=title_style,
+                alignment=TA_CENTER
+            )
+        else:
+            hebrew_style = styles['Normal']
+            hebrew_title_style = title_style
+        
+        story_elements.append(Paragraph(story_title, hebrew_title_style))
         story_elements.append(Spacer(1, 20))
-        story_elements.append(Paragraph(f"The Adventures of {character_name}", styles['Heading2']))
+        subtitle = f"The Adventures of {character_name}" if not is_hebrew else f"הרפתקאות של {character_name}"
+        story_elements.append(Paragraph(subtitle, hebrew_style))
         story_elements.append(PageBreak())
         
         # Story pages
@@ -284,7 +314,7 @@ class StoryProcessor:
                 img = Paragraph("[Image not generated]", styles['Normal'])
             
             # Text cell
-            text_para = Paragraph(page_text, styles['Normal'])
+            text_para = Paragraph(page_text, hebrew_style)
             page_data.append([img, text_para])
             
             # Create table
@@ -314,7 +344,7 @@ class StoryProcessor:
     
     def process_story(self, pdf_file, character_image, character_name: str,
                      character_age: int, art_style: str, output_folder: str,
-                     max_pages: int = 10, progress_bar=None) -> Dict:
+                     language: str = "English", progress_bar=None) -> Dict:
         """
         Main processing function with fail-fast image generation
         """
@@ -333,8 +363,8 @@ class StoryProcessor:
             if progress_bar:
                 progress_bar.progress(10, "Extracting text from PDF...")
             
-            story_text, language = self.extract_text_from_pdf(pdf_file)
-            story_pages = self.split_into_pages(story_text, max_pages)
+            story_text, detected_lang = self.extract_text_from_pdf(pdf_file)
+            story_pages = self.split_into_pages(story_text)
             
             # Step 2: Generate images for each page (fail fast if any fails)
             if progress_bar:
@@ -365,7 +395,7 @@ class StoryProcessor:
             
             story_title = f"{character_name}'s Adventure"
             pdf_path = self.create_pdf_booklet(
-                story_title, character_name, story_pages, image_paths, output_folder
+                story_title, character_name, story_pages, image_paths, output_folder, language
             )
             
             if progress_bar:

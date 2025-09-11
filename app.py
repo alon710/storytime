@@ -39,7 +39,7 @@ def main():
             character_age = st.number_input("Age", min_value=1, max_value=12, value=5)
         with col2:
             art_style = st.selectbox("Art Style", ["storybook", "watercolor", "cartoon"])
-            max_pages = st.number_input("Max Pages", min_value=1, max_value=10, value=5)
+            language = st.selectbox("Output Language", ["English", "Hebrew"])
         
         output_folder = st.text_input("Output Folder", value=str(Path.home() / "Downloads"))
         
@@ -68,7 +68,7 @@ def main():
                 character_age=character_age,
                 art_style=art_style,
                 output_folder=str(output_path),
-                max_pages=max_pages,
+                language=language,
                 progress_bar=progress_bar
             )
             
