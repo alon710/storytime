@@ -113,7 +113,7 @@ class StoryProcessor:
         return pages
     
     def generate_image_for_page(self, character_image, character_name: str, character_age: int, 
-                               page_text: str, art_style: str) -> Optional[str]:
+                               character_gender: str, page_text: str, art_style: str) -> Optional[str]:
         """
         Generate image for a story page using Gemini 2.5 Flash Image Preview (nano-banana)
         
@@ -128,6 +128,7 @@ class StoryProcessor:
             character_image: PIL image of character for consistency
             character_name: Name of character
             character_age: Age for age-appropriate illustrations
+            character_gender: Gender (Boy/Girl) for character consistency
             page_text: Story text for this page
             art_style: Art style (storybook, watercolor, etc.)
             
@@ -163,7 +164,7 @@ class StoryProcessor:
                 system_prompt = f"""
                 Generate a single wordless {art_style} style children's book illustration for this story page without any text or words.
                 
-                Character: {character_name}, age {character_age}
+                Character: {character_name}, a {character_age}-year-old {character_gender.lower()}
                 Story text: {page_text}
                 
                 Use the character image as reference to maintain visual consistency.
@@ -344,7 +345,7 @@ class StoryProcessor:
         return pdf_path
     
     def process_story(self, pdf_file, character_image, character_name: str,
-                     character_age: int, art_style: str, output_folder: str,
+                     character_age: int, character_gender: str, art_style: str, output_folder: str,
                      language: str = "English", progress_bar=None) -> Dict:
         """
         Main processing function with fail-fast image generation
@@ -378,7 +379,7 @@ class StoryProcessor:
                     progress_bar.progress(int(progress), f"Generating image {i+1}/{len(story_pages)}...")
                 
                 image_path = self.generate_image_for_page(
-                    character_image, character_name, character_age, page_text, art_style
+                    character_image, character_name, character_age, character_gender, page_text, art_style
                 )
                 
                 if image_path is None:

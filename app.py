@@ -37,6 +37,7 @@ def main():
         with col1:
             character_name = st.text_input("Character Name", value="Alex")
             character_age = st.number_input("Age", min_value=1, max_value=12, value=5)
+            character_gender = st.selectbox("Gender", ["Boy", "Girl"])
         with col2:
             art_style = st.selectbox(
                 "Art Style", ["storybook", "watercolor", "cartoon"]
@@ -67,6 +68,7 @@ def main():
                 character_image=character_image,
                 character_name=character_name,
                 character_age=character_age,
+                character_gender=character_gender,
                 art_style=art_style,
                 output_folder=str(output_path),
                 language=language,
