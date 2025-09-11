@@ -167,10 +167,18 @@ class StoryProcessor:
                 Character: {character_name}, a {character_age}-year-old {character_gender.lower()}
                 Story text: {page_text}
                 
-                Use the character image as reference to maintain visual consistency.
+                CRITICAL STYLE CONSISTENCY REQUIREMENTS:
+                - Use the character image as reference to maintain EXACT visual consistency across ALL pages
+                - Keep the SAME art style ({art_style}) throughout the entire book - same color palette, same line quality, same lighting
+                - Maintain consistent character appearance: same face, hair, clothing style, and proportions on every page
+                - Use consistent background elements and environmental style
+                - Keep the same illustration technique and visual treatment across all images
+                - Ensure uniform color saturation and brightness levels
+                
                 Create one complete illustration scene that is warm and child-friendly, engaging for ages 2-8.
                 Do not create a grid, collage, or multiple panels - generate only one single cohesive image.
                 Do not include any text, letters, or words in the illustration.
+                This illustration must look like it belongs in the same book as all other pages.
                 """
                 
                 # Create contents list with system prompt, text, and character image
@@ -243,8 +251,17 @@ class StoryProcessor:
                         st.error(f"❌ API quota exceeded after {settings.max_retries + 1} attempts. Please wait or upgrade your Google API plan.")
                         st.info("💡 Try again in a few minutes, or upgrade to paid tier for higher quotas.")
                         return None
+                # Check if it's a 500 internal server error
+                elif "500 INTERNAL" in error_str:
+                    if attempt < settings.max_retries:
+                        st.warning(f"⚠️ Google API server error. Retrying... (attempt {attempt + 1}/{settings.max_retries + 1})")
+                        continue
+                    else:
+                        st.error(f"❌ Google API server error after {settings.max_retries + 1} attempts. This is a temporary Google server issue.")
+                        st.info("💡 Please try again in a few minutes. This is not related to your API key or quota.")
+                        return None
                 else:
-                    # Non-quota error - don't retry
+                    # Other non-retryable errors
                     st.error(f"❌ Image generation failed: {error_str}")
                     return None
         
