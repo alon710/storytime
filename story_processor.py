@@ -8,6 +8,7 @@ from config import settings
 from image_generator import ImageGenerator
 from text_personalizer import TextPersonalizer
 from pdf_builder import PDFBuilder
+from color_generator import ColorGenerator
 
 
 class StoryProcessor:
@@ -21,7 +22,8 @@ class StoryProcessor:
 
         self.image_generator = ImageGenerator(client, model)
         self.text_personalizer = TextPersonalizer(client, model)
-        self.pdf_builder = PDFBuilder(self.text_personalizer)
+        self.color_generator = ColorGenerator(client, model)
+        self.pdf_builder = PDFBuilder(self.text_personalizer, self.color_generator)
 
     def generate_image_for_page(
         self,
