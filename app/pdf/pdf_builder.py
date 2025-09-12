@@ -1,24 +1,15 @@
-"""PDF generation module for StoryTime with child-friendly styling."""
-
 from typing import Optional
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors as reportlab_colors
 from app.ai.text_personalizer import TextPersonalizer
-from app.ai.color_generator import ColorGenerator
 from app.pdf.font_manager import FontManager
 from app.utils.logger import logger
 
 
 class PDFBuilder:
-    """Creates child-friendly PDF storybooks with playful styling."""
-
-    def __init__(
-        self, text_personalizer: TextPersonalizer, color_generator: ColorGenerator
-    ):
-        """Initialize with text personalizer and color generator."""
+    def __init__(self, text_personalizer: TextPersonalizer):
         self.text_personalizer = text_personalizer
-        self.color_generator = color_generator
         self.font_manager = FontManager()
         self.fonts = self.font_manager.setup_fonts()
 
@@ -32,7 +23,6 @@ class PDFBuilder:
         image_paths: list[Optional[str]],
         output_path: str,
     ) -> str:
-        """Create complete illustrated PDF storybook with child-friendly styling."""
         pdf_path = f"{output_path}/{book_title.replace(' ', '_')}_storybook.pdf"
         c = canvas.Canvas(pdf_path, pagesize=A4)
         width, height = A4
@@ -53,15 +43,7 @@ class PDFBuilder:
         for i, (page_data, image_path) in enumerate(zip(pages_data, image_paths)):
             c.showPage()  # New page
 
-            # Generate colors for this page
-            colors = self.color_generator.generate_color_palette(
-                page_data["title"],
-                page_data.get("story_text", ""),
-                i + 1,
-                len(pages_data),
-                character_age,
-            )
-
+            colors = None
             # Pass previous pages as context for text personalization
             previous_pages = pages_data[:i] if i > 0 else None
             self._create_story_page(
@@ -130,12 +112,8 @@ class PDFBuilder:
         character_age: int,
         character_gender: str,
         previous_pages: list[dict] | None = None,
-        colors: dict | None = None,
     ):
-        """Create story page with full-image background and colored text banner."""
-        # Use fallback colors if none provided
-        if not colors:
-            colors = {"background": "#FFF8E7", "banner": "#E8F4FD", "accent": "#FFE4E1"}
+        colors = {"background": "#FFF8E7", "banner": "#E8F4FD", "accent": "#FFE4E1"}
 
         # Full-page background color
         c.setFillColor(reportlab_colors.HexColor(colors["background"]))
