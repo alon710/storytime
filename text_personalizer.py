@@ -14,14 +14,35 @@ class TextPersonalizer:
         self.model = model
 
     def personalize(
-        self, text: str, character_name: str, character_age: int, character_gender: str
+        self,
+        text: str,
+        character_name: str,
+        character_age: int,
+        character_gender: str,
+        previous_pages: list[dict] | None = None,
     ) -> str:
         """Personalize story text for age and gender-appropriate language."""
         try:
+            # Build context from previous pages if provided
+            context_info = ""
+            if previous_pages:
+                context_info = "\n\nPrevious story context for continuity:\n"
+                for i, page in enumerate(previous_pages[-3:], 1):  # Last 3 pages only
+                    context_info += f"Page {i}: {page.get('title', '')} - {page.get('story_text', '')}\n"
+                    
+                logger.info(
+                    "Including previous pages for text personalization continuity",
+                    extra={
+                        "previous_pages_count": len(previous_pages),
+                        "context_pages_used": min(3, len(previous_pages)),
+                        "total_context_length": len(context_info)
+                    }
+                )
+
             personalization_prompt = f"""
             Rewrite this children's story text:
             
-            Original: "{text}"
+            Original: "{text}"{context_info}
             
             Requirements:
             - Replace "hero" with {character_name}
@@ -31,6 +52,7 @@ class TextPersonalizer:
             - Warm, child-friendly tone
             - Same approximate length
             - Use appropriate pronouns
+            - Maintain narrative consistency with previous pages
             
             Return only the rewritten text.
             """
@@ -52,18 +74,32 @@ class TextPersonalizer:
                     extra={
                         "original_length": len(text),
                         "personalized_length": len(personalized_text),
+                        "had_previous_context": previous_pages is not None,
+                        "character_name": character_name,
+                        "character_age": character_age
                     },
                 )
                 return personalized_text
             else:
                 logger.warning(
-                    "AI personalization failed, falling back to simple name replacement"
+                    "AI personalization failed, falling back to simple name replacement",
+                    extra={
+                        "character_name": character_name,
+                        "had_previous_context": previous_pages is not None
+                    }
                 )
                 return self._simple_replacement(text, character_name)
 
         except Exception as e:
             logger.error(
-                "AI personalization failed", extra={"error": str(e)}, exc_info=True
+                "AI personalization failed", 
+                extra={
+                    "error": str(e),
+                    "character_name": character_name,
+                    "had_previous_context": previous_pages is not None,
+                    "text_length": len(text)
+                }, 
+                exc_info=True
             )
             return self._simple_replacement(text, character_name)
 

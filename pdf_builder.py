@@ -32,11 +32,13 @@ class PDFBuilder:
         self._create_title_page(c, width, height, book_title)
         
         # Story pages
-        for page_data, image_path in zip(pages_data, image_paths):
+        for i, (page_data, image_path) in enumerate(zip(pages_data, image_paths)):
             c.showPage()  # New page
+            # Pass previous pages as context for text personalization
+            previous_pages = pages_data[:i] if i > 0 else None
             self._create_story_page(
                 c, width, height, page_data, image_path,
-                character_name, character_age, character_gender
+                character_name, character_age, character_gender, previous_pages
             )
         
         c.save()
@@ -68,6 +70,7 @@ class PDFBuilder:
         character_name: str,
         character_age: int,
         character_gender: str,
+        previous_pages: list[dict] | None = None,
     ):
         """Create story page with image and text."""
         # Page title
@@ -85,7 +88,7 @@ class PDFBuilder:
         story_text = page_data.get("story_text", "")
         if story_text.strip():
             personalized_text = self.text_personalizer.personalize(
-                story_text, character_name, character_age, character_gender
+                story_text, character_name, character_age, character_gender, previous_pages
             )
             
             # Simple text wrapping

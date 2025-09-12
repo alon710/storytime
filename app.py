@@ -64,7 +64,7 @@ def main():
         character_name = st.text_input("Character Name", value="Alex")
 
     with col2:
-        character_gender = st.selectbox("Gender", ["Boy", "Girl"])
+        character_gender = st.selectbox("Gender", ["Girl", "Boy"])
         character_age = st.number_input("Age", min_value=1, max_value=12, value=5)
 
     character_image = st.file_uploader(

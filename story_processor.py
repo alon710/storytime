@@ -33,6 +33,8 @@ class StoryProcessor:
         book_title: str,
         page_title: str,
         story_text: str = "",
+        previous_pages: list[dict] | None = None,
+        previous_images: list[str] | None = None,
     ):
         """Generate illustration using image generator module."""
         return self.image_generator.generate(
@@ -44,6 +46,8 @@ class StoryProcessor:
             book_title,
             page_title,
             story_text,
+            previous_pages,
+            previous_images,
         )
 
     def create_pdf_booklet(
@@ -157,6 +161,22 @@ class StoryProcessor:
                     int(progress), f"Generating image {i + 1}/{len(pages_data)}..."
                 )
 
+            # Pass previous pages and images as context for continuity
+            previous_pages = pages_data[:i] if i > 0 else None
+            previous_images = image_paths[:i] if i > 0 else None
+            
+            from logger import logger
+            logger.info(
+                "Generating image with context",
+                extra={
+                    "page_number": i + 1,
+                    "total_pages": len(pages_data),
+                    "page_title": page_data["title"],
+                    "previous_pages_count": len(previous_pages) if previous_pages else 0,
+                    "previous_images_count": len(previous_images) if previous_images else 0
+                }
+            )
+            
             image_path = self.generate_image_for_page(
                 character_image,
                 character_name,
@@ -166,6 +186,8 @@ class StoryProcessor:
                 book_title,
                 page_data["title"],
                 page_data.get("story_text", ""),
+                previous_pages,
+                previous_images,
             )
 
             if image_path is None:
