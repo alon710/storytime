@@ -30,7 +30,6 @@ def main():
     st.write("Create AI-Illustrated Children's Storybooks")
     st.caption(f"Version {version}")
 
-    # Check for API key
     try:
         settings.google_api_key
     except Exception:
@@ -38,7 +37,6 @@ def main():
         st.info("You can get an API key from: https://makersuite.google.com/app/apikey")
         st.stop()
 
-    # Initialize session state for pages with default story
     if "pages" not in st.session_state:
         st.session_state.pages = [
             {
@@ -58,7 +56,6 @@ def main():
             },
         ]
 
-    # Character and book settings
     st.header("📖 Book Settings")
     col1, col2 = st.columns(2)
 
@@ -73,16 +70,17 @@ def main():
     (column1,) = st.columns(1)
 
     with column1:
-        art_style = st.selectbox("Art Style", ["storybook", "watercolor", "cartoon"])
+        book_language = st.selectbox(
+            "Book Language",
+            ["English", "Hebrew", "Arabic"],
+        )
         character_image = st.file_uploader(
             "Upload Character Photo", type=["jpg", "jpeg", "png"]
         )
     st.divider()
 
-    # Pages management
     st.header("📄 Story Pages")
 
-    # Add/Remove page buttons
     (col1, col2) = st.columns(2)
     with col1:
         if st.button("➕ Add Page", use_container_width=True):
@@ -103,7 +101,6 @@ def main():
             st.session_state.pages.pop()
             st.rerun()
 
-    # Display pages
     for i, page in enumerate(st.session_state.pages):
         with st.expander(f"📖 {page['title']}", expanded=True):
             (col1,) = st.columns(1)
@@ -128,7 +125,6 @@ def main():
                     key=f"prompt_{i}",
                 )
 
-            # Update session state
             st.session_state.pages[i] = {
                 "title": new_title,
                 "story_text": new_story_text,
@@ -137,11 +133,9 @@ def main():
 
     st.divider()
 
-    # Generate button
     if st.button(
         "🎨 Generate Illustrated Storybook", type="primary", use_container_width=True
     ):
-        # Validation
         missing_fields = []
         if not character_image:
             missing_fields.append("Character Photo")
@@ -150,7 +144,6 @@ def main():
         if not book_title.strip():
             missing_fields.append("Book Title")
 
-        # Check if all pages have illustration prompts
         empty_prompts = []
         for i, page in enumerate(st.session_state.pages):
             if not page["illustration_prompt"].strip():
@@ -161,10 +154,8 @@ def main():
         elif empty_prompts:
             st.error(f"Please add illustration prompts for: {', '.join(empty_prompts)}")
         else:
-            # Use current directory for output
             output_path = Path.cwd()
 
-            # Process
             with st.spinner("Creating your illustrated storybook..."):
                 processor = StoryProcessor()
                 progress_bar = st.progress(0)
@@ -175,20 +166,18 @@ def main():
                     character_name=character_name,
                     character_age=character_age,
                     character_gender=character_gender,
-                    art_style=art_style,
+                    book_language=book_language,
                     book_title=book_title,
                     output_folder=str(output_path),
                     progress_bar=progress_bar,
                 )
 
-                # Results
                 if results["success"]:
                     st.success("🎉 Illustrated storybook created!")
                     if results["pdf_path"] and os.path.exists(results["pdf_path"]):
                         with open(results["pdf_path"], "rb") as file:
                             pdf_data = file.read()
 
-                        # Provide download button
                         st.download_button(
                             "📥 Download Illustrated Storybook",
                             data=pdf_data,
