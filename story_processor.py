@@ -33,6 +33,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.enums import TA_CENTER
 
 from config import settings
+from logger import logger
 
 
 class StoryProcessor:
@@ -68,12 +69,15 @@ class StoryProcessor:
         character_gender: str,
         illustration_prompt: str,
         art_style: str,
+        book_title: str,
+        page_title: str,
+        story_text: str = "",
     ) -> Optional[str]:
         """
         Generate custom illustration using Gemini 2.5 Flash Image Preview
 
         This method:
-        1. Takes character reference image + custom illustration prompt + style
+        1. Takes character reference image + custom illustration prompt + style + context
         2. Sends to Gemini with proper response modalities ['Text', 'Image']
         3. Extracts binary image data from response
         4. Saves to temporary file for PDF generation
@@ -86,6 +90,9 @@ class StoryProcessor:
             character_gender: Gender (Boy/Girl) for character consistency
             illustration_prompt: Custom prompt describing the desired illustration
             art_style: Art style (storybook, watercolor, etc.)
+            book_title: Title of the book for thematic consistency
+            page_title: Title of this specific page
+            story_text: Optional story context for this page
 
         Returns:
             Path to generated image file, or None if failed
@@ -96,12 +103,16 @@ class StoryProcessor:
             character_image_pil = Image.open(character_image)
             character_image.seek(0)  # Reset for next use
 
-            # Create system prompt for image generation
+            # Create comprehensive system prompt for image generation
+            context_info = f"\nStory context: {story_text}" if story_text.strip() else ""
+            
             system_prompt = f"""
             Generate a single wordless {art_style} style children's book illustration without any text or words.
             
+            Book: "{book_title}"
+            Page: "{page_title}"
             Character: {character_name}, a {character_age}-year-old {character_gender.lower()}
-            Illustration request: {illustration_prompt}
+            Illustration request: {illustration_prompt}{context_info}
             
             CRITICAL STYLE CONSISTENCY REQUIREMENTS:
             - Use the character image as reference to maintain EXACT visual consistency across ALL pages
@@ -110,6 +121,7 @@ class StoryProcessor:
             - Use consistent background elements and environmental style
             - Keep the same illustration technique and visual treatment across all images
             - Ensure uniform color saturation and brightness levels
+            - This illustration is part of "{book_title}" and should fit the overall story theme
             
             Create one complete illustration scene that is warm and child-friendly, engaging for ages 2-8.
             Do not create a grid, collage, or multiple panels - generate only one single cohesive image.
@@ -130,7 +142,7 @@ class StoryProcessor:
             )
 
             if not response or not response.candidates:
-                print("No response from Gemini")
+                logger.warning("No response received from Gemini API")
                 return None
 
             # Extract image from response
@@ -152,17 +164,17 @@ class StoryProcessor:
                         generated_image.save(tmp_file.name, "PNG")
                         temp_path = tmp_file.name
 
-                    print(f"Generated image saved: {temp_path}")
-                    print(f"Response text: {response_text[:200]}...")
+                    logger.info("Successfully generated image for page", extra={"page_title": page_title, "temp_path": temp_path})
+                    logger.debug("Gemini response text", extra={"response_text": response_text[:200]})
                     return temp_path
 
             # If we reach here, no image was generated
-            print(f"No image in response. Text only: {response_text[:200]}...")
+            logger.warning("No image generated for page - text response only", extra={"page_title": page_title, "response_text": response_text[:200]})
             return None
 
         except Exception as e:
             error_str = str(e)
-            print(f"Image generation failed: {error_str}")
+            logger.error("Image generation failed for page", extra={"page_title": page_title, "error": error_str}, exc_info=True)
             return None
 
     def create_pdf_booklet(
@@ -280,6 +292,9 @@ class StoryProcessor:
                     character_gender,
                     page_data["illustration_prompt"],
                     art_style,
+                    book_title,
+                    page_data["title"],
+                    page_data.get("story_text", ""),
                 )
 
                 if image_path is None:

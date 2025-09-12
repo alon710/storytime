@@ -38,10 +38,24 @@ def main():
         st.info("You can get an API key from: https://makersuite.google.com/app/apikey")
         st.stop()
 
-    # Initialize session state for pages
+    # Initialize session state for pages with default story
     if "pages" not in st.session_state:
         st.session_state.pages = [
-            {"title": "Page 1", "story_text": "", "illustration_prompt": ""}
+            {
+                "title": "Adventure Morning",
+                "story_text": "Our hero wakes up with Barvaz, their duck-shaped doll. 'Today we fly!' says Mom. The hero feels curious and excited.",
+                "illustration_prompt": "Hero in cozy pajamas holding Barvaz (a cute duck-shaped doll), standing in a bright bedroom with morning sunlight streaming through the window",
+            },
+            {
+                "title": "Packing Together",
+                "story_text": "Hero helps put clothes and Barvaz in the suitcase. 'Quack, I'm ready too!' Barvaz seems to say.",
+                "illustration_prompt": "Hero carefully placing Barvaz (duck-shaped doll) into a colorful suitcase, surrounded by folded clothes, simple bedroom background",
+            },
+            {
+                "title": "The Airport Ride",
+                "story_text": "In the car to the airport, hero looks out the window. 'Airplanes, here we come!' says Dad.",
+                "illustration_prompt": "Hero sitting in a car seat, holding Barvaz (duck doll) on their lap, looking excitedly through the car window at the passing scenery",
+            },
         ]
 
     # Character and book settings
@@ -71,7 +85,7 @@ def main():
     # Add/Remove page buttons
     (col1, col2) = st.columns(2)
     with col1:
-        if st.button("➕ Add Page"):
+        if st.button("➕ Add Page", use_container_width=True):
             page_num = len(st.session_state.pages) + 1
             st.session_state.pages.append(
                 {
@@ -82,7 +96,10 @@ def main():
             )
             st.rerun()
     with col2:
-        if st.button("➖ Remove Page") and len(st.session_state.pages) > 1:
+        if (
+            st.button("➖ Remove Page", use_container_width=True)
+            and len(st.session_state.pages) > 1
+        ):
             st.session_state.pages.pop()
             st.rerun()
 
@@ -177,6 +194,7 @@ def main():
                             data=pdf_data,
                             file_name=f"{book_title.replace(' ', '_')}_storybook.pdf",
                             mime="application/pdf",
+                            use_container_width=True,
                         )
 
                         st.info(
