@@ -78,7 +78,9 @@ def main():
         st.write(f"**{len(character_images)} photo(s) uploaded**")
 
         if st.button(
-            "Generate Character Reference", type="primary", use_container_width=True
+            "Generate Character Reference",
+            type="primary",
+            width="stretch",
         ):
             with st.spinner("Generating character reference with both poses..."):
                 try:
@@ -100,7 +102,7 @@ def main():
 
                         st.write("**Generated Character Reference:**")
                         generated_image = Image.open(result_path)
-                        st.image(generated_image, use_container_width=True)
+                        st.image(generated_image, width="stretch")
 
                         with open(result_path, "rb") as file:
                             image_data = file.read()
@@ -112,7 +114,7 @@ def main():
                             data=image_data,
                             file_name=filename,
                             mime="image/png",
-                            use_container_width=True,
+                            width="stretch",
                         )
 
                         try:

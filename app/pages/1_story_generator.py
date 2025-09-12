@@ -123,7 +123,7 @@ def main():
 
     (col1, col2) = st.columns(2)
     with col1:
-        if st.button("+ Add Page", use_container_width=True):
+        if st.button("+ Add Page", width="stretch"):
             page_num = len(st.session_state.pages) + 1
             st.session_state.pages.append(
                 {
@@ -135,7 +135,7 @@ def main():
             st.rerun()
     with col2:
         if (
-            st.button("- Remove Page", use_container_width=True)
+            st.button("- Remove Page", width="stretch")
             and len(st.session_state.pages) > 1
         ):
             st.session_state.pages.pop()
@@ -179,9 +179,7 @@ def main():
 
     st.divider()
 
-    if st.button(
-        "Generate Illustrated Storybook", type="primary", use_container_width=True
-    ):
+    if st.button("Generate Illustrated Storybook", type="primary", width="stretch"):
         missing_fields = []
         if not character_images:
             missing_fields.append("Character Photos")
@@ -226,7 +224,7 @@ def main():
                                 data=pdf_file.read(),
                                 file_name=f"{book_title.replace(' ', '_')}_storybook.pdf",
                                 mime="application/pdf",
-                                use_container_width=True,
+                                width="stretch",
                             )
 
                         st.info(

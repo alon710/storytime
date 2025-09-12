@@ -2,17 +2,20 @@
 
 from typing import Optional
 from google import genai
-from google.genai import types
 from app.utils.logger import logger
+from app.ai.base import BaseAIGenerator
 
 
-class ColorGenerator:
+class ColorGenerator(BaseAIGenerator):
     """Handles AI-powered color palette generation for child-friendly PDF layouts."""
 
     def __init__(self, client: genai.Client, model: str):
         """Initialize generator with GenAI client and model."""
-        self.client = client
-        self.model = model
+        super().__init__(client, model)
+
+    def generate(self, *args, **kwargs):
+        """Main generation method - delegates to generate_color_palette."""
+        return self.generate_color_palette(*args, **kwargs)
 
     def generate_color_palette(
         self,
@@ -23,80 +26,79 @@ class ColorGenerator:
         character_age: int,
     ) -> Optional[dict]:
         """Generate calm, pastel color palette for a story page."""
-        try:
-            color_prompt = f"""
-            Generate a calm, pastel color palette for a children's storybook page.
-            
-            Page context:
-            - Title: "{page_title}"
-            - Story: "{story_text[:500]}..."
-            - Page {page_number} of {total_pages}
-            - Character age: {character_age} years old
-            
-            Requirements:
-            - Colors must be calm, soothing, and pastel
-            - Suitable for ages 2-8, especially {character_age} years old  
-            - Should complement the story mood and content
-            - Generate exactly 3 colors: background, banner, and accent
-            - Return colors as hex codes only (e.g., #FFE4E1)
-            
-            Format your response as exactly 3 lines:
-            background: #HEXCODE
-            banner: #HEXCODE  
-            accent: #HEXCODE
-            
-            Example:
-            background: #FFF8E7
-            banner: #E8F4FD
-            accent: #FFE4E1
-            """
+        return self._with_error_handling(
+            "color palette generation",
+            self._generate_color_palette_impl,
+            page_title,
+            story_text,
+            page_number,
+            total_pages,
+            character_age
+        )
 
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=[color_prompt],
-                config=types.GenerateContentConfig(response_modalities=["Text"]),
-            )
+    def _generate_color_palette_impl(
+        self,
+        page_title: str,
+        story_text: str,
+        page_number: int,
+        total_pages: int,
+        character_age: int,
+    ) -> Optional[dict]:
+        color_prompt = f"""
+        Generate a calm, pastel color palette for a children's storybook page.
+        
+        Page context:
+        - Title: "{page_title}"
+        - Story: "{story_text[:500]}..."
+        - Page {page_number} of {total_pages}
+        - Character age: {character_age} years old
+        
+        Requirements:
+        - Colors must be calm, soothing, and pastel
+        - Suitable for ages 2-8, especially {character_age} years old  
+        - Should complement the story mood and content
+        - Generate exactly 3 colors: background, banner, and accent
+        - Return colors as hex codes only (e.g., #FFE4E1)
+        
+        Format your response as exactly 3 lines:
+        background: #HEXCODE
+        banner: #HEXCODE  
+        accent: #HEXCODE
+        
+        Example:
+        background: #FFF8E7
+        banner: #E8F4FD
+        accent: #FFE4E1
+        """
 
-            if (
-                response
-                and response.candidates
-                and response.candidates[0].content.parts
-            ):
-                color_text = response.candidates[0].content.parts[0].text.strip()
-                colors = self._parse_colors(color_text)
+        response = self._generate_content([color_prompt])
+        if response is None:
+            return self._fallback_colors(page_number, total_pages)
+            
+        color_text = self._extract_text_response(response)
+        if color_text:
+            colors = self._parse_colors(color_text)
 
-                if colors:
-                    logger.info(
-                        "Successfully generated color palette",
-                        extra={
-                            "page_title": page_title,
-                            "page_number": page_number,
-                            "colors": colors,
-                        },
-                    )
-                    return colors
-                else:
-                    logger.warning(
-                        "Failed to parse AI color response, using fallback",
-                        extra={"page_title": page_title, "response": color_text[:100]},
-                    )
-                    return self._fallback_colors(page_number, total_pages)
+            if colors:
+                logger.info(
+                    "Successfully generated color palette",
+                    extra={
+                        "page_title": page_title,
+                        "page_number": page_number,
+                        "colors": colors,
+                    },
+                )
+                return colors
             else:
                 logger.warning(
-                    "No color response from AI, using fallback",
-                    extra={"page_title": page_title},
+                    "Failed to parse AI color response, using fallback",
+                    extra={"page_title": page_title, "response": color_text[:100]},
                 )
                 return self._fallback_colors(page_number, total_pages)
-
-        except Exception as e:
-            logger.error(
-                "Color generation failed",
-                extra={
-                    "page_title": page_title,
-                    "page_number": page_number,
-                    "error": str(e),
-                },
-                exc_info=True,
+        else:
+            logger.warning(
+                "No color response from AI, using fallback",
+                extra={"page_title": page_title},
             )
             return self._fallback_colors(page_number, total_pages)
 
