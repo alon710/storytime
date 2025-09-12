@@ -69,62 +69,57 @@ def main():
 
     if character_images:
         st.write(f"**{len(character_images)} photo(s) uploaded**")
-        
+
         if st.button(
             "Generate Character Reference", type="primary", use_container_width=True
         ):
-                with st.spinner("Generating character reference with both poses..."):
-                    try:
-                        client = genai.Client(api_key=settings.google_api_key)
-                        generator = CharacterGenerator(
-                            client=client, model=settings.model
+            with st.spinner("Generating character reference with both poses..."):
+                try:
+                    client = genai.Client(api_key=settings.google_api_key)
+                    generator = CharacterGenerator(client=client, model=settings.model)
+
+                    result_path = generator.generate_character_poses(
+                        character_images=character_images,
+                        character_name=character_name,
+                        character_age=character_age,
+                        art_style=art_style.lower()
+                        .replace(" ", "_")
+                        .replace("studio_", ""),
+                    )
+
+                    if result_path:
+                        st.success("Character reference generated successfully!")
+
+                        st.write("**Generated Character Reference:**")
+                        generated_image = Image.open(result_path)
+                        st.image(generated_image, use_container_width=True)
+
+                        with open(result_path, "rb") as file:
+                            image_data = file.read()
+
+                        filename = f"character_reference_{character_name or 'character'}_{art_style.lower().replace(' ', '_')}.png"
+
+                        st.download_button(
+                            "Download Character Reference",
+                            data=image_data,
+                            file_name=filename,
+                            mime="image/png",
+                            use_container_width=True,
                         )
 
-                        result_path = generator.generate_character_poses(
-                            character_images=character_images,
-                            character_name=character_name,
-                            character_age=character_age,
-                            art_style=art_style.lower()
-                            .replace(" ", "_")
-                            .replace("studio_", ""),
+                        try:
+                            os.unlink(result_path)
+                        except Exception:
+                            pass
+                    else:
+                        st.error(
+                            "Failed to generate character reference. Please try again."
                         )
 
-                        if result_path:
-                            st.success("Character reference generated successfully!")
-
-                            st.write("**Generated Character Reference:**")
-                            generated_image = Image.open(result_path)
-                            st.image(generated_image, use_container_width=True)
-
-                            with open(result_path, "rb") as file:
-                                image_data = file.read()
-
-                            filename = f"character_reference_{character_name or 'character'}_{art_style.lower().replace(' ', '_')}.png"
-
-                            st.download_button(
-                                "Download Character Reference",
-                                data=image_data,
-                                file_name=filename,
-                                mime="image/png",
-                                use_container_width=True,
-                            )
-
-                            try:
-                                os.unlink(result_path)
-                            except Exception:
-                                pass
-                        else:
-                            st.error(
-                                "Failed to generate character reference. Please try again."
-                            )
-
-                    except Exception as e:
-                        st.error(f"Error generating character reference: {str(e)}")
+                except Exception as e:
+                    st.error(f"Error generating character reference: {str(e)}")
     else:
         st.info("Please upload 1-3 character photos to begin")
 
 
-if __name__ == "__main__":
-    main()
-else:
-    main()
+main()

@@ -61,7 +61,6 @@ def main():
             format_func=lambda x: template_options[x],
             index=current_selection,
             help="Select a pre-made story structure or start from scratch",
-            key="template_selector",
         )
 
         # Check if selection changed
@@ -237,7 +236,4 @@ def main():
                     st.error(f"Failed: {results.get('error', 'Unknown error')}")
 
 
-if __name__ == "__main__":
-    main()
-else:
-    main()
+main()
