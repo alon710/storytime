@@ -32,10 +32,11 @@ def main():
     (col1,) = st.columns(1)
 
     with col1:
-        character_image = st.file_uploader(
-            "Upload Child's Photo",
+        character_images = st.file_uploader(
+            "Upload Child's Photos (up to 3)",
             type=["jpg", "jpeg", "png"],
-            help="Upload a clear photo of the child for character reference",
+            accept_multiple_files=True,
+            help="Upload 1-3 clear photos of the child for character reference",
         )
 
         character_name = st.text_input(
@@ -61,21 +62,17 @@ def main():
 
     st.divider()
 
-    if character_image is not None:
-        st.subheader("Preview")
+    # Add validation for image count
+    if character_images and len(character_images) > 3:
+        st.error("Please upload a maximum of 3 photos.")
+        st.stop()
 
-        (col1,) = st.columns(1)
-        with col1:
-            st.write("**Uploaded Photo:**")
-            uploaded_image = Image.open(character_image)
-
-            uploaded_image.thumbnail((300, 300))
-            st.image(uploaded_image, use_container_width=True)
-
+    if character_images:
+        st.write(f"**{len(character_images)} photo(s) uploaded**")
+        
         if st.button(
             "Generate Character Reference", type="primary", use_container_width=True
         ):
-            if character_image:
                 with st.spinner("Generating character reference with both poses..."):
                     try:
                         client = genai.Client(api_key=settings.google_api_key)
@@ -84,7 +81,7 @@ def main():
                         )
 
                         result_path = generator.generate_character_poses(
-                            character_image=character_image,
+                            character_images=character_images,
                             character_name=character_name,
                             character_age=character_age,
                             art_style=art_style.lower()
@@ -123,10 +120,8 @@ def main():
 
                     except Exception as e:
                         st.error(f"Error generating character reference: {str(e)}")
-            else:
-                st.error("Please upload a character photo first.")
     else:
-        st.info("Please upload a character photo to begin")
+        st.info("Please upload 1-3 character photos to begin")
 
 
 if __name__ == "__main__":

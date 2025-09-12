@@ -27,7 +27,7 @@ class StoryProcessor:
 
     def generate_image_for_page(
         self,
-        character_image,
+        character_images,
         character_name: str,
         character_age: int,
         character_gender: str,
@@ -40,7 +40,7 @@ class StoryProcessor:
     ):
         """Generate illustration using image generator module."""
         return self.image_generator.generate(
-            character_image,
+            character_images,
             character_name,
             character_age,
             character_gender,
@@ -76,7 +76,7 @@ class StoryProcessor:
     def process_story(
         self,
         pages_data: list[dict],
-        character_image,
+        character_images,
         character_name: str,
         character_age: int,
         character_gender: str,
@@ -98,7 +98,7 @@ class StoryProcessor:
         try:
             image_paths = self._generate_all_images(
                 pages_data,
-                character_image,
+                character_images,
                 character_name,
                 character_age,
                 character_gender,
@@ -144,7 +144,7 @@ class StoryProcessor:
     def _generate_all_images(
         self,
         pages_data,
-        character_image,
+        character_images,
         character_name,
         character_age,
         character_gender,
@@ -180,7 +180,7 @@ class StoryProcessor:
             )
             
             image_path = self.generate_image_for_page(
-                character_image,
+                character_images,
                 character_name,
                 character_age,
                 character_gender,

@@ -50,9 +50,17 @@ def main():
         character_gender = st.selectbox("Gender", ["Girl", "Boy"])
         character_age = st.number_input("Age", min_value=1, max_value=12, value=5)
 
-    character_image = st.file_uploader(
-        "Upload Character Photo", type=["jpg", "jpeg", "png"]
+    character_images = st.file_uploader(
+        "Upload Character Photos (up to 3)", 
+        type=["jpg", "jpeg", "png"],
+        accept_multiple_files=True,
+        help="Upload 1-3 photos of the child for character reference"
     )
+    
+    # Add validation for image count
+    if character_images and len(character_images) > 3:
+        st.error("Please upload a maximum of 3 photos.")
+        st.stop()
     st.divider()
 
     st.header("Story Pages")
@@ -113,8 +121,8 @@ def main():
         "Generate Illustrated Storybook", type="primary", use_container_width=True
     ):
         missing_fields = []
-        if not character_image:
-            missing_fields.append("Character Photo")
+        if not character_images:
+            missing_fields.append("Character Photos")
         if not character_name.strip():
             missing_fields.append("Character Name")
         if not book_title.strip():
@@ -138,7 +146,7 @@ def main():
 
                 results = processor.process_story(
                     pages_data=st.session_state.pages,
-                    character_image=character_image,
+                    character_images=character_images,
                     character_name=character_name,
                     character_age=character_age,
                     character_gender=character_gender,

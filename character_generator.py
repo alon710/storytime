@@ -19,16 +19,19 @@ class CharacterGenerator:
 
     def generate_character_poses(
         self,
-        character_image,
+        character_images,
         character_name: str = "",
         character_age: int = 5,
         art_style: str = "cartoon",
     ) -> Optional[str]:
-        """Generate character reference with front and side poses in a single image."""
+        """Generate character reference with front and side poses in a single image using multiple reference photos."""
         try:
-            character_image.seek(0)
-            character_image_pil = Image.open(character_image)
-            character_image.seek(0)
+            # Process all uploaded character images
+            character_image_pils = []
+            for char_img in character_images:
+                char_img.seek(0)
+                character_image_pils.append(Image.open(char_img))
+                char_img.seek(0)
 
             # Style-specific modifiers
             style_modifiers = {
@@ -46,6 +49,8 @@ class CharacterGenerator:
                 character_info = f"Character name: {character_name}, "
             character_info += f"{character_age}-year-old child"
 
+            reference_note = f"I have provided {len(character_image_pils)} reference photo(s)" if len(character_image_pils) > 1 else "I have provided a reference photo"
+            
             system_prompt = f"""
             Create a character reference sheet showing the same child in TWO different poses within a SINGLE image:
 
@@ -56,7 +61,8 @@ class CharacterGenerator:
             Art style: {style_prompt}
 
             REQUIREMENTS:
-            - Use the uploaded photo as reference for the child's appearance
+            - {reference_note} of the child - use all photos to capture the child's appearance, features, and characteristics
+            - Synthesize features from all reference images to create a consistent character design
             - Both poses should be consistent - same clothing, hair, and features
             - Clear split composition with both poses in the same image
             - No text or labels in the image
@@ -79,13 +85,17 @@ class CharacterGenerator:
                 extra={
                     "art_style": art_style,
                     "character_name": character_name,
-                    "character_age": character_age
+                    "character_age": character_age,
+                    "num_reference_images": len(character_image_pils)
                 }
             )
 
+            # Create contents with system prompt and all character images
+            contents = [system_prompt] + character_image_pils
+
             response = self.client.models.generate_content(
                 model=self.model,
-                contents=[system_prompt, character_image_pil],
+                contents=contents,
                 config=types.GenerateContentConfig(
                     response_modalities=["Text", "Image"]
                 ),

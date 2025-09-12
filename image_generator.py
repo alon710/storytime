@@ -19,7 +19,7 @@ class ImageGenerator:
 
     def generate(
         self,
-        character_image,
+        character_images,
         character_name: str,
         character_age: int,
         character_gender: str,
@@ -30,11 +30,14 @@ class ImageGenerator:
         previous_pages: list[dict] | None = None,
         previous_images: list[str] | None = None,
     ) -> Optional[str]:
-        """Generate illustration using character reference and custom prompt."""
+        """Generate illustration using multiple character references and custom prompt."""
         try:
-            character_image.seek(0)
-            character_image_pil = Image.open(character_image)
-            character_image.seek(0)
+            # Process all uploaded character images
+            character_image_pils = []
+            for char_img in character_images:
+                char_img.seek(0)
+                character_image_pils.append(Image.open(char_img))
+                char_img.seek(0)
 
             context_info = (
                 f"\nStory context: {story_text}" if story_text.strip() else ""
@@ -75,7 +78,9 @@ class ImageGenerator:
                             }
                         )
 
-            # Add context about previous images if they're included
+            # Add context about character references and previous images
+            character_context_note = f"Character reference: I have provided {len(character_image_pils)} reference photo(s) of {character_name}. Use all photos to capture the child's appearance, features, and characteristics accurately."
+            
             image_context_note = ""
             if previous_image_pils:
                 image_context_note = f"\n\nVisual reference: You are provided with {len(previous_image_pils)} previous illustration(s) from this storybook for visual consistency. Use these to maintain consistent character appearance, art style, and overall visual continuity."
@@ -85,12 +90,13 @@ class ImageGenerator:
             
             Book: "{book_title}" | Page: "{page_title}"
             Character: {character_name} ({character_age}-year-old {character_gender.lower()})
+            {character_context_note}
             Request: {illustration_prompt}{context_info}{previous_context}{image_context_note}
             
             Requirements:
-            - Use character image reference for visual consistency
+            - Use all character reference photos for visual consistency - synthesize features from all images
             - Maintain storybook style throughout book
-            - Keep consistent character appearance and proportions
+            - Keep consistent character appearance and proportions based on all reference images
             - Create warm, child-friendly scene for ages 2-8
             - Single cohesive image without text or multiple panels
             - Maintain visual consistency with previous illustrations
@@ -103,14 +109,15 @@ class ImageGenerator:
             - Background should be a complete environment (room, outdoor scene, etc.) not abstract patterns
             """
 
-            # Include character image, prompt, and any previous images in the API call
-            contents = [system_prompt, illustration_prompt, character_image_pil] + previous_image_pils
+            # Include all character images, prompt, and any previous images in the API call
+            contents = [system_prompt, illustration_prompt] + character_image_pils + previous_image_pils
             
             logger.debug(
                 "Sending generation request to Gemini",
                 extra={
                     "page_title": page_title,
                     "total_content_items": len(contents),
+                    "character_images_count": len(character_image_pils),
                     "has_previous_images": len(previous_image_pils) > 0,
                     "previous_pages_count": len(previous_pages) if previous_pages else 0
                 }
