@@ -43,12 +43,30 @@ class CharacterGenerator(BaseAIGenerator):
         art_style: str,
         gender: str,
     ) -> Optional[str]:
+        character_image_pils = self._prepare_character_images(character_images)
+        style_prompt = self._get_style_prompt(art_style)
+        character_info = self._build_character_info(character_name, character_age, gender)
+        system_prompt = self._build_system_prompt(gender, character_info, style_prompt, len(character_image_pils), art_style)
+        
+        self._log_generation_start(art_style, character_name, character_age, gender, len(character_image_pils))
+        
+        contents = [system_prompt] + character_image_pils
+        response = self._generate_content(contents, ["Text", "Image"])
+        
+        if response is None:
+            return None
+            
+        return self._process_generation_response(response, art_style, character_name, gender)
+
+    def _prepare_character_images(self, character_images):
         character_image_pils = []
         for char_img in character_images:
             char_img.seek(0)
             character_image_pils.append(Image.open(char_img))
             char_img.seek(0)
+        return character_image_pils
 
+    def _get_style_prompt(self, art_style: str) -> str:
         style_modifiers = {
             ArtStyle.watercolor: "soft watercolor painting style, gentle brush strokes, flowing colors, artistic paper texture",
             ArtStyle.cartoon: "bright cartoon style, clean lines, vibrant colors, friendly and approachable",
@@ -56,22 +74,20 @@ class CharacterGenerator(BaseAIGenerator):
             ArtStyle.digital: "clean digital art style, smooth shading, modern illustration, crisp details",
             ArtStyle.pixar: "Pixar 3D animation style, expressive features, warm lighting, high-quality rendering",
         }
+        
+        return style_modifiers.get(art_style.lower(), style_modifiers["cartoon"])
 
-        style_prompt = style_modifiers.get(
-            art_style.lower(),
-            style_modifiers["cartoon"],
-        )
-
+    def _build_character_info(self, character_name: str, character_age: int, gender: str) -> str:
         character_info = ""
         if character_name:
             character_info += f"Character name: {character_name}, "
         character_info += f"{character_age}-year-old {gender}"
+        return character_info
 
-        reference_note = (
-            f"I have provided {len(character_image_pils)} reference photo(s)"
-        )
-
-        system_prompt = f"""
+    def _build_system_prompt(self, gender: str, character_info: str, style_prompt: str, num_images: int, art_style: str) -> str:
+        reference_note = f"I have provided {num_images} reference photo(s)"
+        
+        return f"""
         Create a character reference sheet showing the same {gender} in TWO different poses within a SINGLE image:
 
         LEFT SIDE: Front-facing view (looking directly at camera/viewer)
@@ -100,6 +116,7 @@ class CharacterGenerator(BaseAIGenerator):
         - Consistent lighting and art style across both poses
         """
 
+    def _log_generation_start(self, art_style: str, character_name: str, character_age: int, gender: str, num_images: int):
         logger.debug(
             "Generating character reference poses",
             extra={
@@ -107,17 +124,11 @@ class CharacterGenerator(BaseAIGenerator):
                 "character_name": character_name,
                 "character_age": character_age,
                 "gender": gender,
-                "num_reference_images": len(character_image_pils),
+                "num_reference_images": num_images,
             },
         )
 
-        contents = [system_prompt] + character_image_pils
-
-        response = self._generate_content(contents, ["Text", "Image"])
-
-        if response is None:
-            return None
-
+    def _process_generation_response(self, response, art_style: str, character_name: str, gender: str) -> Optional[str]:
         generated_image = None
         response_text = ""
 
@@ -128,25 +139,10 @@ class CharacterGenerator(BaseAIGenerator):
                 image_data = part.inline_data.data
                 generated_image = Image.open(io.BytesIO(image_data))
 
-                with tempfile.NamedTemporaryFile(
-                    suffix=".png", delete=False
-                ) as tmp_file:
-                    generated_image.save(tmp_file.name, "PNG")
-                    temp_path = tmp_file.name
-
-                logger.info(
-                    "Successfully generated character reference poses",
-                    extra={
-                        "art_style": art_style,
-                        "temp_path": temp_path,
-                        "character_name": character_name,
-                        "gender": gender,
-                    },
-                )
-                logger.debug(
-                    "Gemini character generation response",
-                    extra={"response_text": response_text[:200]},
-                )
+                temp_path = self._save_generated_image(generated_image)
+                
+                self._log_generation_success(art_style, temp_path, character_name, gender)
+                self._log_response_text(response_text)
                 return temp_path
 
         logger.warning(
@@ -154,3 +150,25 @@ class CharacterGenerator(BaseAIGenerator):
             extra={"response_text": response_text[:200]},
         )
         return None
+
+    def _save_generated_image(self, generated_image: Image.Image) -> str:
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
+            generated_image.save(tmp_file.name, "PNG")
+            return tmp_file.name
+
+    def _log_generation_success(self, art_style: str, temp_path: str, character_name: str, gender: str):
+        logger.info(
+            "Successfully generated character reference poses",
+            extra={
+                "art_style": art_style,
+                "temp_path": temp_path,
+                "character_name": character_name,
+                "gender": gender,
+            },
+        )
+
+    def _log_response_text(self, response_text: str):
+        logger.debug(
+            "Gemini character generation response",
+            extra={"response_text": response_text[:200]},
+        )
