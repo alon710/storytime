@@ -1,0 +1,57 @@
+{
+  "name": "Airplane Adventure",
+  "description": "A child's first airplane trip with their favorite toy",
+  "default_title": "Hero's First Flight",
+  "pages": [
+    {
+      "title": "Adventure Morning",
+      "story_text": "Hero wakes up with Barvaz, their duck-shaped toy. 'Today we fly!' says Mom. Hero feels curious.",
+      "illustration_prompt": "Hero in pajamas holding Barvaz (a duck-shaped toy), standing in a bright bedroom with morning sunlight"
+    },
+    {
+      "title": "Packing Together",
+      "story_text": "Hero helps put clothes and Barvaz in the bag. 'Quack, I'm ready too!' Barvaz seems to say.",
+      "illustration_prompt": "Hero placing Barvaz (duck-shaped toy) into a small suitcase, simple background"
+    },
+    {
+      "title": "The Airport Ride",
+      "story_text": "In the car to the airport, Hero looks out the window. 'Airplanes, here we come!' says Dad.",
+      "illustration_prompt": "Hero sitting with Barvaz on their lap, beside a car window looking out at scenery"
+    },
+    {
+      "title": "Big Busy Airport",
+      "story_text": "The airport is full of lights, signs, and rolling suitcases. Hero holds Mom's hand tight.",
+      "illustration_prompt": "Hero holding Barvaz, standing next to rolling suitcases in a busy airport"
+    },
+    {
+      "title": "Looking Out the Window",
+      "story_text": "Hero spots airplanes waiting outside. 'They look like shiny birds!' Hero says. Barvaz peeks too.",
+      "illustration_prompt": "Hero and Barvaz looking through an airport window at airplanes on the tarmac"
+    },
+    {
+      "title": "Finding Our Seats",
+      "story_text": "Inside the airplane, Hero climbs into their seat. Barvaz gets a little spot too.",
+      "illustration_prompt": "Hero sitting in an airplane seat, buckled in, with Barvaz next to them"
+    },
+    {
+      "title": "The Loud Roar",
+      "story_text": "'WHOOSH!' goes the airplane. Hero holds Mom's hand, Barvaz covers his ears. They all giggle.",
+      "illustration_prompt": "Hero with Barvaz on their lap, Barvaz's wings covering his ears, simple background"
+    },
+    {
+      "title": "Up in the Clouds",
+      "story_text": "Hero looks outside—fluffy clouds everywhere! 'It feels like we're flying in a dream,' Hero says.",
+      "illustration_prompt": "Hero with Barvaz by an airplane window, with soft cloud shapes visible outside"
+    },
+    {
+      "title": "Snack Time",
+      "story_text": "The flight attendant brings juice and crackers. Hero shares a tiny cracker with Barvaz.",
+      "illustration_prompt": "Hero with a cup and small crackers, sharing one with Barvaz"
+    },
+    {
+      "title": "New Place, New Fun",
+      "story_text": "The airplane lands safely. 'We did it!' says Mom. Hero, Dad, and Barvaz are ready to explore.",
+      "illustration_prompt": "Hero holding Barvaz, standing beside a suitcase, ready for new adventures"
+    }
+  ]
+}

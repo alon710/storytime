@@ -5,9 +5,28 @@ Create custom illustrated PDF storybooks with dynamic page creation
 
 import streamlit as st
 import os
+import json
 from pathlib import Path
 from story_processor import StoryProcessor
 from config import settings
+
+
+def load_story_templates():
+    """Load all JSON templates from story_templates directory"""
+    templates = {}
+    template_dir = "story_templates"
+
+    if os.path.exists(template_dir):
+        for filename in os.listdir(template_dir):
+            if filename.endswith(".json"):
+                try:
+                    with open(os.path.join(template_dir, filename), "r") as f:
+                        template_key = filename.replace(".json", "")
+                        templates[template_key] = json.load(f)
+                except Exception as e:
+                    st.error(f"Error loading template {filename}: {str(e)}")
+
+    return templates
 
 
 def main():
@@ -21,29 +40,67 @@ def main():
         st.stop()
 
     if "pages" not in st.session_state:
-        st.session_state.pages = [
-            {
-                "title": "Adventure Morning",
-                "story_text": "Our hero wakes up with Barvaz, their duck-shaped doll. 'Today we fly!' says Mom. The hero feels curious and excited.",
-                "illustration_prompt": "Hero in cozy pajamas holding Barvaz (a cute duck-shaped doll), standing in a bright bedroom with morning sunlight streaming through the window",
-            },
-            {
-                "title": "Packing Together",
-                "story_text": "Hero helps put clothes and Barvaz in the suitcase. 'Quack, I'm ready too!' Barvaz seems to say.",
-                "illustration_prompt": "Hero carefully placing Barvaz (duck-shaped doll) into a colorful suitcase, surrounded by folded clothes, simple bedroom background",
-            },
-            {
-                "title": "The Airport Ride",
-                "story_text": "In the car to the airport, hero looks out the window. 'Airplanes, here we come!' says Dad.",
-                "illustration_prompt": "Hero sitting in a car seat, holding Barvaz (duck doll) on their lap, looking excitedly through the car window at the passing scenery",
-            },
+        st.session_state.pages = []
+
+    # Story Template Selection
+    st.header("Story Template (Optional)")
+    templates = load_story_templates()
+
+    if templates:
+        template_options = ["None - Start from scratch"] + [
+            template["name"] for template in templates.values()
         ]
+        template_keys = ["none"] + list(templates.keys())
+
+        # Get current selection from session state, default to 0
+        current_selection = st.session_state.get("template_selection", 0)
+
+        selected_index = st.selectbox(
+            "Choose a template to start with:",
+            options=range(len(template_options)),
+            format_func=lambda x: template_options[x],
+            index=current_selection,
+            help="Select a pre-made story structure or start from scratch",
+            key="template_selector",
+        )
+
+        # Check if selection changed
+        if selected_index != current_selection:
+            st.session_state.template_selection = selected_index
+
+            if selected_index == 0:
+                # "None" selected - clear pages
+                st.session_state.pages = []
+                st.session_state.book_title = "My Adventure"
+            else:
+                # Template selected - load it
+                selected_template_key = template_keys[selected_index]
+                selected_template = templates[selected_template_key]
+                st.session_state.pages = selected_template["pages"]
+                st.session_state.book_title = selected_template.get(
+                    "default_title", "My Adventure"
+                )
+
+            st.rerun()
+
+        # Show description for selected template
+        if selected_index > 0:
+            selected_template_key = template_keys[selected_index]
+            selected_template = templates[selected_template_key]
+    else:
+        st.info(
+            "No story templates found. You can start creating your story from scratch."
+        )
+
+    st.divider()
 
     st.header("Book Settings")
     col1, col2 = st.columns(2)
 
     with col1:
-        book_title = st.text_input("Book Title", value="My Adventure")
+        # Use session state book title if it exists (from template), otherwise default
+        default_book_title = st.session_state.get("book_title", "My Adventure")
+        book_title = st.text_input("Book Title", value=default_book_title)
         character_name = st.text_input("Character Name", value="Alex")
 
     with col2:
@@ -84,6 +141,12 @@ def main():
         ):
             st.session_state.pages.pop()
             st.rerun()
+
+    # Show message when no pages exist
+    if not st.session_state.pages:
+        st.info(
+            "📖 No story pages yet. Click '+ Add Page' to start creating your story, or load a template above."
+        )
 
     for i, page in enumerate(st.session_state.pages):
         with st.expander(f"Page: {page['title']}", expanded=True):

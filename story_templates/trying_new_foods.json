@@ -1,0 +1,57 @@
+{
+  "name": "Trying New Foods",
+  "description": "Learning to try new foods with a special friend",
+  "default_title": "Hero's Food Adventure",
+  "pages": [
+    {
+      "title": "Hero and Friend",
+      "story_text": "Hero has a special doll friend. The friend goes everywhere with Hero—even to the table!",
+      "illustration_prompt": "Hero hugging their doll friend in their bedroom, with toys around"
+    },
+    {
+      "title": "Family Time",
+      "story_text": "At dinner, Hero's family sits together. The doll friend and Hero have their own chairs too.",
+      "illustration_prompt": "A family sitting around a warm dinner table, Hero and their doll friend on small chairs"
+    },
+    {
+      "title": "Favorite Crunch",
+      "story_text": "Hero loves pretzels and cornflakes. Crunch, crunch! The doll friend loves them too.",
+      "illustration_prompt": "Hero and their doll friend sitting on a picnic blanket outside, crunching pretzels"
+    },
+    {
+      "title": "What's on the Table?",
+      "story_text": "Sometimes new foods appear. Red, green, orange, and yellow! They look like a rainbow.",
+      "illustration_prompt": "A kitchen counter with colorful bowls of food lined up like a rainbow"
+    },
+    {
+      "title": "Friend Gets Curious",
+      "story_text": "The doll friend whispers, 'Hmm… what's that?' They look at a tiny piece of food.",
+      "illustration_prompt": "The doll friend on the table next to a single carrot slice, with Hero leaning in"
+    },
+    {
+      "title": "Little Tastes",
+      "story_text": "Hero says, 'I can try a tiny bit!' Just one nibble is enough to start.",
+      "illustration_prompt": "Hero in a high chair holding a very small bite of food with their doll friend on their lap"
+    },
+    {
+      "title": "Brave Together",
+      "story_text": "Hero and their doll friend taste together. 'Yay! We are so brave!'",
+      "illustration_prompt": "Hero and their doll friend sitting on a swing outside, pretending to eat together"
+    },
+    {
+      "title": "Time for Play",
+      "story_text": "If Hero is all done, they can play for a while and come back later.",
+      "illustration_prompt": "Hero on the living room floor building blocks, their doll friend next to them"
+    },
+    {
+      "title": "Growing Strong",
+      "story_text": "Every tiny taste helps Hero grow strong and clever. The doll friend claps for them.",
+      "illustration_prompt": "Hero standing tall in front of a mirror, their doll friend in their arms, both smiling"
+    },
+    {
+      "title": "I Can Do It",
+      "story_text": "Hero smiles, 'I can try! I can eat with my family. I can grow!'",
+      "illustration_prompt": "Hero and their doll friend at a park picnic with Hero's family, looking proud and happy"
+    }
+  ]
+}
