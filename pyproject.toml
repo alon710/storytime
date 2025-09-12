@@ -1,6 +1,6 @@
 [project]
 name = "storytime"
-version = "0.2.0"
+version = "0.3.0"
 description = "AI-powered children's book illustration generator using Google Gemini"
 readme = "README.md"
 requires-python = ">=3.12"

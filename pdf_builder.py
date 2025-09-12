@@ -4,7 +4,6 @@ from typing import Optional
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors as reportlab_colors
-from reportlab.lib.units import inch
 from text_personalizer import TextPersonalizer
 from color_generator import ColorGenerator
 from font_manager import FontManager
@@ -232,7 +231,7 @@ class PDFBuilder:
         
         for i in range(steps):
             # Simple linear interpolation between colors
-            ratio = i / steps
+            i / steps
             # For simplicity, just use the first color - real gradients are complex in ReportLab
             c.setFillColor(reportlab_colors.HexColor(color1))
             c.rect(0, i * step_height, width, step_height, stroke=0, fill=1)
