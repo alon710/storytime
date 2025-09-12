@@ -42,12 +42,11 @@ class CharacterGenerator(BaseAIGenerator):
         gender: str,
     ) -> Optional[str]:
         character_image_pils = self._prepare_character_images(character_images)
-        style_prompt = self._get_style_prompt(art_style)
         character_info = self._build_character_info(
             character_name, character_age, gender
         )
         system_prompt = self._build_system_prompt(
-            gender, character_info, style_prompt, len(character_image_pils), art_style
+            gender, character_info, len(character_image_pils), art_style
         )
 
         self._log_generation_start(
@@ -72,17 +71,6 @@ class CharacterGenerator(BaseAIGenerator):
             char_img.seek(0)
         return character_image_pils
 
-    def _get_style_prompt(self, art_style: str) -> str:
-        style_modifiers = {
-            ArtStyle.watercolor: "soft watercolor painting style, gentle brush strokes, flowing colors, artistic paper texture",
-            ArtStyle.cartoon: "bright cartoon style, clean lines, vibrant colors, friendly and approachable",
-            ArtStyle.ghibli: "Studio Ghibli anime style, soft cel animation, beautiful detailed eyes, magical atmosphere",
-            ArtStyle.digital: "clean digital art style, smooth shading, modern illustration, crisp details",
-            ArtStyle.pixar: "Pixar 3D animation style, expressive features, warm lighting, high-quality rendering",
-        }
-
-        return style_modifiers.get(art_style.lower(), style_modifiers["cartoon"])
-
     def _build_character_info(
         self, character_name: str, character_age: int, gender: str
     ) -> str:
@@ -96,40 +84,18 @@ class CharacterGenerator(BaseAIGenerator):
         self,
         gender: str,
         character_info: str,
-        style_prompt: str,
         num_images: int,
         art_style: str,
     ) -> str:
         reference_note = f"I have provided {num_images} reference photo(s)"
-
-        return f"""
-        Create a character reference sheet showing the same {gender} in TWO different poses within a SINGLE image:
-
-        LEFT SIDE: Front-facing view (looking directly at camera/viewer)
-        RIGHT SIDE: Side profile view (facing to the right)
-
-        Character details: {character_info}
-        Art style: {style_prompt}
-
-        REQUIREMENTS:
-        - {reference_note} of the {gender} - use all photos to capture the {gender}'s appearance, features, and characteristics
-        - Synthesize features from all reference images to create a consistent character design
-        - Both poses should be consistent - same clothing, hair, and features
-        - Clear split composition with both poses in the same image
-        - No text or labels in the image
-        - Child-friendly, warm, and welcoming style
-        - Both poses should be full body or at least torso up
-        - Maintain consistent proportions between both poses
-        - Apply the {art_style} style uniformly to both poses
-        - Clean white or simple background
         
-        COMPOSITION:
-        - Single cohesive image with two character poses
-        - Left pose: Front view facing forward
-        - Right pose: Side profile view
-        - Both poses should be clearly visible and well-proportioned
-        - Consistent lighting and art style across both poses
-        """
+        template = self.env.get_template('character_generation.j2')
+        return template.render(
+            gender=gender,
+            character_info=character_info,
+            reference_note=reference_note,
+            art_style=art_style.lower(),
+        )
 
     def _log_generation_start(
         self,

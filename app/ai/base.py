@@ -1,9 +1,11 @@
 """Base class for AI generators in StoryTime."""
 
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Optional, Any
 from google import genai
 from google.genai import types
+from jinja2 import Environment, FileSystemLoader
 from app.utils.logger import logger
 
 
@@ -11,6 +13,8 @@ class BaseAIGenerator(ABC):
     def __init__(self, client: genai.Client, model: str):
         self.client = client
         self.model = model
+        template_dir = Path(__file__).parent / 'templates'
+        self.env = Environment(loader=FileSystemLoader(str(template_dir)))
 
     def _with_error_handling(self, operation_name: str, func, *args, **kwargs):
         try:
