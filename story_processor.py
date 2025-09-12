@@ -2,7 +2,6 @@
 
 import os
 import time
-from typing import List, Dict
 
 from google import genai
 from config import settings
@@ -56,7 +55,7 @@ class StoryProcessor:
         character_name: str,
         character_age: int,
         character_gender: str,
-        pages_data: List[Dict],
+        pages_data: list[dict],
         image_paths,
         output_path: str,
         language: str = "English",
@@ -76,7 +75,7 @@ class StoryProcessor:
 
     def process_story(
         self,
-        pages_data: List[Dict],
+        pages_data: list[dict],
         character_image,
         character_name: str,
         character_age: int,
@@ -85,7 +84,7 @@ class StoryProcessor:
         book_title: str,
         output_folder: str,
         progress_bar=None,
-    ) -> Dict:
+    ) -> dict:
         """Orchestrate complete illustrated storybook generation."""
         results = {
             "success": False,
