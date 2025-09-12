@@ -10,10 +10,7 @@ from app.utils.logger import logger
 
 
 class CharacterGenerator:
-    """Handles AI-powered character reference generation using Google GenAI."""
-
     def __init__(self, client: genai.Client, model: str):
-        """Initialize generator with GenAI client and model."""
         self.client = client
         self.model = model
 
@@ -27,14 +24,12 @@ class CharacterGenerator:
     ) -> Optional[str]:
         """Generate character reference with front and side poses in a single image using multiple reference photos."""
         try:
-            # Process all uploaded character images
             character_image_pils = []
             for char_img in character_images:
                 char_img.seek(0)
                 character_image_pils.append(Image.open(char_img))
                 char_img.seek(0)
 
-            # Style-specific modifiers
             style_modifiers = {
                 "watercolor": "soft watercolor painting style, gentle brush strokes, flowing colors, artistic paper texture",
                 "cartoon": "bright cartoon style, clean lines, vibrant colors, friendly and approachable",
@@ -98,7 +93,6 @@ class CharacterGenerator:
                 },
             )
 
-            # Create contents with system prompt and all character images
             contents = [system_prompt] + character_image_pils
 
             response = self.client.models.generate_content(
