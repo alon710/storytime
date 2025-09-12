@@ -67,16 +67,9 @@ def main():
         character_gender = st.selectbox("Gender", ["Boy", "Girl"])
         character_age = st.number_input("Age", min_value=1, max_value=12, value=5)
 
-    (column1,) = st.columns(1)
-
-    with column1:
-        book_language = st.selectbox(
-            "Book Language",
-            ["English", "Hebrew", "Arabic"],
-        )
-        character_image = st.file_uploader(
-            "Upload Character Photo", type=["jpg", "jpeg", "png"]
-        )
+    character_image = st.file_uploader(
+        "Upload Character Photo", type=["jpg", "jpeg", "png"]
+    )
     st.divider()
 
     st.header("📄 Story Pages")
@@ -166,7 +159,6 @@ def main():
                     character_name=character_name,
                     character_age=character_age,
                     character_gender=character_gender,
-                    book_language=book_language,
                     book_title=book_title,
                     output_folder=str(output_path),
                     progress_bar=progress_bar,

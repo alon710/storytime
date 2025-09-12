@@ -11,12 +11,12 @@ from logger import logger
 
 class ImageGenerator:
     """Handles AI-powered illustration generation using Google GenAI."""
-    
+
     def __init__(self, client: genai.Client, model: str):
         """Initialize generator with GenAI client and model."""
         self.client = client
         self.model = model
-    
+
     def generate(
         self,
         character_image,
@@ -27,7 +27,6 @@ class ImageGenerator:
         book_title: str,
         page_title: str,
         story_text: str = "",
-        language: str = "English",
     ) -> Optional[str]:
         """Generate illustration using character reference and custom prompt."""
         try:
@@ -35,15 +34,16 @@ class ImageGenerator:
             character_image_pil = Image.open(character_image)
             character_image.seek(0)
 
-            context_info = f"\nStory context: {story_text}" if story_text.strip() else ""
-            cultural_context = f"\nLanguage/Cultural context: {language}" if language != "English" else ""
-            
+            context_info = (
+                f"\nStory context: {story_text}" if story_text.strip() else ""
+            )
+
             system_prompt = f"""
             Generate a storybook style children's book illustration without text.
             
             Book: "{book_title}" | Page: "{page_title}"
             Character: {character_name} ({character_age}-year-old {character_gender.lower()})
-            Request: {illustration_prompt}{context_info}{cultural_context}
+            Request: {illustration_prompt}{context_info}
             
             Requirements:
             - Use character image reference for visual consistency
@@ -51,7 +51,6 @@ class ImageGenerator:
             - Keep consistent character appearance and proportions
             - Create warm, child-friendly scene for ages 2-8
             - Single cohesive image without text or multiple panels
-            - Consider cultural context appropriate for {language} speakers when relevant
             
             COMPOSITION REQUIREMENTS:
             - Fill the ENTIRE image space with the scene - no borders, frames, or vignettes
@@ -84,18 +83,39 @@ class ImageGenerator:
                     image_data = part.inline_data.data
                     generated_image = Image.open(io.BytesIO(image_data))
 
-                    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
+                    with tempfile.NamedTemporaryFile(
+                        suffix=".png", delete=False
+                    ) as tmp_file:
                         generated_image.save(tmp_file.name, "PNG")
                         temp_path = tmp_file.name
 
-                    logger.info("Successfully generated image for page", extra={"page_title": page_title, "temp_path": temp_path})
-                    logger.debug("Gemini response text", extra={"response_text": response_text[:200]})
+                    logger.info(
+                        "Successfully generated image for page",
+                        extra={"page_title": page_title, "temp_path": temp_path},
+                    )
+                    logger.debug(
+                        "Gemini response text",
+                        extra={"response_text": response_text[:200]},
+                    )
                     return temp_path
 
-            logger.warning("No image generated for page - text response only", extra={"page_title": page_title, "response_text": response_text[:200]})
+            logger.warning(
+                "No image generated for page - text response only",
+                extra={"page_title": page_title, "response_text": response_text[:200]},
+            )
             return None
 
         except Exception as e:
-            error_str = str(e)
-            logger.error("Image generation failed for page", extra={"page_title": page_title, "error": error_str}, exc_info=True)
+            error_details = {
+                "page_title": page_title,
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+            }
+            
+            if hasattr(e, 'status_code'):
+                error_details["status_code"] = e.status_code
+            if hasattr(e, 'response'):
+                error_details["response"] = str(e.response)
+            
+            logger.error("Image generation failed", extra=error_details, exc_info=True)
             return None

@@ -18,11 +18,10 @@ class StoryProcessor:
         os.environ["GEMINI_API_KEY"] = settings.google_api_key
         client = genai.Client(api_key=settings.google_api_key)
         model = settings.model
-        
+
         self.image_generator = ImageGenerator(client, model)
         self.text_personalizer = TextPersonalizer(client, model)
         self.pdf_builder = PDFBuilder(self.text_personalizer)
-
 
     def generate_image_for_page(
         self,
@@ -34,7 +33,6 @@ class StoryProcessor:
         book_title: str,
         page_title: str,
         story_text: str = "",
-        language: str = "English",
     ):
         """Generate illustration using image generator module."""
         return self.image_generator.generate(
@@ -46,7 +44,6 @@ class StoryProcessor:
             book_title,
             page_title,
             story_text,
-            language,
         )
 
     def create_pdf_booklet(
@@ -58,7 +55,6 @@ class StoryProcessor:
         pages_data: list[dict],
         image_paths,
         output_path: str,
-        language: str = "English",
     ) -> str:
         """Create illustrated PDF booklet using PDF builder module."""
         return self.pdf_builder.create_booklet(
@@ -69,9 +65,7 @@ class StoryProcessor:
             pages_data,
             image_paths,
             output_path,
-            language,
         )
-
 
     def process_story(
         self,
@@ -80,7 +74,6 @@ class StoryProcessor:
         character_name: str,
         character_age: int,
         character_gender: str,
-        book_language: str,
         book_title: str,
         output_folder: str,
         progress_bar=None,
@@ -98,10 +91,15 @@ class StoryProcessor:
 
         try:
             image_paths = self._generate_all_images(
-                pages_data, character_image, character_name, character_age, 
-                character_gender, book_language, book_title, progress_bar
+                pages_data,
+                character_image,
+                character_name,
+                character_age,
+                character_gender,
+                book_title,
+                progress_bar,
             )
-            
+
             if not image_paths:
                 return results
 
@@ -109,19 +107,26 @@ class StoryProcessor:
                 progress_bar.progress(85, "Creating PDF booklet...")
 
             pdf_path = self.create_pdf_booklet(
-                book_title, character_name, character_age, character_gender,
-                pages_data, image_paths, output_folder, book_language
+                book_title,
+                character_name,
+                character_age,
+                character_gender,
+                pages_data,
+                image_paths,
+                output_folder,
             )
 
             if progress_bar:
                 progress_bar.progress(100, "Complete!")
 
-            results.update({
-                "success": True,
-                "pdf_path": pdf_path,
-                "pages_processed": len(pages_data),
-                "processing_time": time.time() - start_time,
-            })
+            results.update(
+                {
+                    "success": True,
+                    "pdf_path": pdf_path,
+                    "pages_processed": len(pages_data),
+                    "processing_time": time.time() - start_time,
+                }
+            )
 
         except Exception as e:
             results["error"] = str(e)
@@ -130,8 +135,16 @@ class StoryProcessor:
 
         return results
 
-    def _generate_all_images(self, pages_data, character_image, character_name, 
-                           character_age, character_gender, book_language, book_title, progress_bar):
+    def _generate_all_images(
+        self,
+        pages_data,
+        character_image,
+        character_name,
+        character_age,
+        character_gender,
+        book_title,
+        progress_bar,
+    ):
         """Generate images for all pages."""
         if progress_bar:
             progress_bar.progress(30, "Generating illustrations...")
@@ -140,12 +153,19 @@ class StoryProcessor:
         for i, page_data in enumerate(pages_data):
             if progress_bar:
                 progress = 10 + (70 * (i + 1) / len(pages_data))
-                progress_bar.progress(int(progress), f"Generating image {i + 1}/{len(pages_data)}...")
+                progress_bar.progress(
+                    int(progress), f"Generating image {i + 1}/{len(pages_data)}..."
+                )
 
             image_path = self.generate_image_for_page(
-                character_image, character_name, character_age, character_gender,
-                page_data["illustration_prompt"], book_title,
-                page_data["title"], page_data.get("story_text", ""), book_language
+                character_image,
+                character_name,
+                character_age,
+                character_gender,
+                page_data["illustration_prompt"],
+                book_title,
+                page_data["title"],
+                page_data.get("story_text", ""),
             )
 
             if image_path is None:
