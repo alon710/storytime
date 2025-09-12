@@ -12,7 +12,7 @@ from config import settings
 
 def main():
     """Story Generator page with dynamic page creation interface"""
-    
+
     try:
         settings.google_api_key
     except Exception:
@@ -51,12 +51,12 @@ def main():
         character_age = st.number_input("Age", min_value=1, max_value=12, value=5)
 
     character_images = st.file_uploader(
-        "Upload Character Photos (up to 3)", 
+        "Upload Character Photos (up to 3)",
         type=["jpg", "jpeg", "png"],
         accept_multiple_files=True,
-        help="Upload 1-3 photos of the child for character reference"
+        help="Upload 1-3 photos of the child for character reference",
     )
-    
+
     # Add validation for image count
     if character_images and len(character_images) > 3:
         st.error("Please upload a maximum of 3 photos.")
@@ -158,30 +158,14 @@ def main():
                 if results["success"]:
                     st.success("Illustrated storybook created successfully!")
                     if results["pdf_path"] and os.path.exists(results["pdf_path"]):
-                        with open(results["pdf_path"], "rb") as file:
-                            pdf_data = file.read()
-
-                        # Display PDF viewer
-                        st.subheader("Preview Your Storybook")
-                        st.write("PDF Viewer:")
-                        
-                        # Use Streamlit's built-in PDF viewer
                         with open(results["pdf_path"], "rb") as pdf_file:
                             st.download_button(
-                                "Download PDF", 
+                                "Download PDF",
                                 data=pdf_file.read(),
                                 file_name=f"{book_title.replace(' ', '_')}_storybook.pdf",
                                 mime="application/pdf",
-                                use_container_width=True
+                                use_container_width=True,
                             )
-                        
-                        st.download_button(
-                            "Download Illustrated Storybook",
-                            data=pdf_data,
-                            file_name=f"{book_title.replace(' ', '_')}_storybook.pdf",
-                            mime="application/pdf",
-                            use_container_width=True,
-                        )
 
                         st.info(
                             f"Generated {results['pages_processed']} illustrations in {results['processing_time']:.1f} seconds"
