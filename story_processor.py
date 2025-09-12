@@ -28,6 +28,8 @@ from reportlab.platypus import (
     Spacer,
     Image as ReportLabImage,
     PageBreak,
+    Table,
+    TableStyle,
 )
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.enums import TA_CENTER
@@ -184,7 +186,7 @@ class StoryProcessor:
         image_paths: List[Optional[str]],
         output_path: str,
     ) -> str:
-        """Create image-only PDF booklet without text"""
+        """Create illustrated PDF booklet with titles, images, and story text"""
         pdf_path = f"{output_path}/{book_title.replace(' ', '_')}_storybook.pdf"
         doc = SimpleDocTemplate(
             pdf_path,
@@ -208,23 +210,53 @@ class StoryProcessor:
         story_elements.append(Paragraph("AI-Generated Illustrated Storybook", styles["Normal"]))
         story_elements.append(PageBreak())
 
-        # Story pages (image-only)
+        # Story pages with title, image, and text
         for i, (page_data, image_path) in enumerate(zip(pages_data, image_paths)):
-            # Page title (small)
+            # Page title
             page_title = Paragraph(page_data["title"], styles["Heading2"])
             story_elements.append(page_title)
-            story_elements.append(Spacer(1, 20))
+            story_elements.append(Spacer(1, 15))
 
-            # Image (large and centered)
+            # Create table with image and story text side by side
+            table_data = []
+            
+            # Image cell
             if image_path and os.path.exists(image_path):
-                # Use larger image size for image-only pages
-                img = ReportLabImage(image_path, width=6 * inch, height=6 * inch)
-                story_elements.append(img)
+                img = ReportLabImage(image_path, width=4 * inch, height=4 * inch)
             else:
-                placeholder = Paragraph("[Image not generated]", styles["Normal"])
-                story_elements.append(placeholder)
+                img = Paragraph("[Image not generated]", styles["Normal"])
 
-            story_elements.append(Spacer(1, 30))
+            # Story text cell
+            story_text = page_data.get("story_text", "")
+            if story_text.strip():
+                # Create a styled paragraph for story text
+                story_style = styles["Normal"]
+                story_style.fontSize = 12
+                story_style.leading = 16
+                text_para = Paragraph(story_text, story_style)
+            else:
+                text_para = Paragraph("[No story text provided]", styles["Normal"])
+
+            # Add to table: [Image, Text]
+            table_data.append([img, text_para])
+
+            # Create table
+            table = Table(table_data, colWidths=[4.2 * inch, 3.3 * inch])
+            table.setStyle(
+                TableStyle(
+                    [
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                        ("TOPPADDING", (0, 0), (-1, -1), 10),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                        ("GRID", (0, 0), (-1, -1), 0.5, (0.8, 0.8, 0.8)),
+                    ]
+                )
+            )
+
+            story_elements.append(table)
+            story_elements.append(Spacer(1, 20))
 
             if i < len(pages_data) - 1:
                 story_elements.append(PageBreak())
