@@ -18,7 +18,7 @@ def get_version():
 
 
 def main():
-    """Main Streamlit application with multipage navigation"""
+    """Main Streamlit application with multi page navigation"""
     st.set_page_config(page_title="StoryTime", page_icon="📚", layout="wide")
 
     version = get_version()
