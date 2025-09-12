@@ -4,11 +4,11 @@ import os
 import time
 
 from google import genai
-from config import settings
-from image_generator import ImageGenerator
-from text_personalizer import TextPersonalizer
-from pdf_builder import PDFBuilder
-from color_generator import ColorGenerator
+from app.utils.settings import settings
+from app.ai.image_generator import ImageGenerator
+from app.ai.text_personalizer import TextPersonalizer
+from app.pdf.pdf_builder import PDFBuilder
+from app.ai.color_generator import ColorGenerator
 
 
 class StoryProcessor:
@@ -166,19 +166,24 @@ class StoryProcessor:
             # Pass previous pages and images as context for continuity
             previous_pages = pages_data[:i] if i > 0 else None
             previous_images = image_paths[:i] if i > 0 else None
-            
-            from logger import logger
+
+            from app.utils.logger import logger
+
             logger.info(
                 "Generating image with context",
                 extra={
                     "page_number": i + 1,
                     "total_pages": len(pages_data),
                     "page_title": page_data["title"],
-                    "previous_pages_count": len(previous_pages) if previous_pages else 0,
-                    "previous_images_count": len(previous_images) if previous_images else 0
-                }
+                    "previous_pages_count": len(previous_pages)
+                    if previous_pages
+                    else 0,
+                    "previous_images_count": len(previous_images)
+                    if previous_images
+                    else 0,
+                },
             )
-            
+
             image_path = self.generate_image_for_page(
                 character_images,
                 character_name,

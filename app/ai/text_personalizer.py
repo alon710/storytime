@@ -2,7 +2,7 @@
 
 from google import genai
 from google.genai import types
-from logger import logger
+from app.utils.logger import logger
 
 
 class TextPersonalizer:
@@ -29,14 +29,14 @@ class TextPersonalizer:
                 context_info = "\n\nPrevious story context for continuity:\n"
                 for i, page in enumerate(previous_pages[-3:], 1):  # Last 3 pages only
                     context_info += f"Page {i}: {page.get('title', '')} - {page.get('story_text', '')}\n"
-                    
+
                 logger.info(
                     "Including previous pages for text personalization continuity",
                     extra={
                         "previous_pages_count": len(previous_pages),
                         "context_pages_used": min(3, len(previous_pages)),
-                        "total_context_length": len(context_info)
-                    }
+                        "total_context_length": len(context_info),
+                    },
                 )
 
             personalization_prompt = f"""
@@ -76,7 +76,7 @@ class TextPersonalizer:
                         "personalized_length": len(personalized_text),
                         "had_previous_context": previous_pages is not None,
                         "character_name": character_name,
-                        "character_age": character_age
+                        "character_age": character_age,
                     },
                 )
                 return personalized_text
@@ -85,21 +85,21 @@ class TextPersonalizer:
                     "AI personalization failed, falling back to simple name replacement",
                     extra={
                         "character_name": character_name,
-                        "had_previous_context": previous_pages is not None
-                    }
+                        "had_previous_context": previous_pages is not None,
+                    },
                 )
                 return self._simple_replacement(text, character_name)
 
         except Exception as e:
             logger.error(
-                "AI personalization failed", 
+                "AI personalization failed",
                 extra={
                     "error": str(e),
                     "character_name": character_name,
                     "had_previous_context": previous_pages is not None,
-                    "text_length": len(text)
-                }, 
-                exc_info=True
+                    "text_length": len(text),
+                },
+                exc_info=True,
             )
             return self._simple_replacement(text, character_name)
 

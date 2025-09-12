@@ -48,12 +48,13 @@ def setup_logger(name: str = "storytime", level: str = "INFO") -> logging.Logger
 def get_logger_with_config() -> logging.Logger:
     """
     Get logger configured with settings from config.py
-    
+
     Returns:
         Configured logger instance using config settings
     """
     try:
-        from config import settings
+        from app.utils.settings import settings
+
         return setup_logger(level=settings.log_level)
     except ImportError:
         # Fallback if config is not available

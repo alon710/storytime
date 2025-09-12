@@ -7,8 +7,8 @@ import streamlit as st
 import os
 import json
 from pathlib import Path
-from story_processor import StoryProcessor
-from config import settings
+from app.ai.story_processor import StoryProcessor
+from app.utils.settings import settings
 
 
 def load_story_templates():

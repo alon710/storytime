@@ -6,7 +6,7 @@ from typing import Optional
 from PIL import Image
 from google import genai
 from google.genai import types
-from logger import logger
+from app.utils.logger import logger
 
 
 class CharacterGenerator:
@@ -23,6 +23,7 @@ class CharacterGenerator:
         character_name: str = "",
         character_age: int = 5,
         art_style: str = "cartoon",
+        gender: str = "boy",
     ) -> Optional[str]:
         """Generate character reference with front and side poses in a single image using multiple reference photos."""
         try:
@@ -39,20 +40,26 @@ class CharacterGenerator:
                 "cartoon": "bright cartoon style, clean lines, vibrant colors, friendly and approachable",
                 "ghibli": "Studio Ghibli anime style, soft cel animation, beautiful detailed eyes, magical atmosphere",
                 "digital": "clean digital art style, smooth shading, modern illustration, crisp details",
-                "pixar": "Pixar 3D animation style, expressive features, warm lighting, high-quality rendering"
+                "pixar": "Pixar 3D animation style, expressive features, warm lighting, high-quality rendering",
             }
 
-            style_prompt = style_modifiers.get(art_style.lower(), style_modifiers["cartoon"])
-            
+            style_prompt = style_modifiers.get(
+                art_style.lower(), style_modifiers["cartoon"]
+            )
+
             character_info = ""
             if character_name:
                 character_info = f"Character name: {character_name}, "
-            character_info += f"{character_age}-year-old child"
+            character_info += f"{character_age}-year-old {gender}"
 
-            reference_note = f"I have provided {len(character_image_pils)} reference photo(s)" if len(character_image_pils) > 1 else "I have provided a reference photo"
-            
+            reference_note = (
+                f"I have provided {len(character_image_pils)} reference photo(s)"
+                if len(character_image_pils) > 1
+                else "I have provided a reference photo"
+            )
+
             system_prompt = f"""
-            Create a character reference sheet showing the same child in TWO different poses within a SINGLE image:
+            Create a character reference sheet showing the same {gender} in TWO different poses within a SINGLE image:
 
             LEFT SIDE: Front-facing view (looking directly at camera/viewer)
             RIGHT SIDE: Side profile view (facing to the right)
@@ -61,7 +68,7 @@ class CharacterGenerator:
             Art style: {style_prompt}
 
             REQUIREMENTS:
-            - {reference_note} of the child - use all photos to capture the child's appearance, features, and characteristics
+            - {reference_note} of the {gender} - use all photos to capture the {gender}'s appearance, features, and characteristics
             - Synthesize features from all reference images to create a consistent character design
             - Both poses should be consistent - same clothing, hair, and features
             - Clear split composition with both poses in the same image
@@ -86,8 +93,9 @@ class CharacterGenerator:
                     "art_style": art_style,
                     "character_name": character_name,
                     "character_age": character_age,
-                    "num_reference_images": len(character_image_pils)
-                }
+                    "gender": gender,
+                    "num_reference_images": len(character_image_pils),
+                },
             )
 
             # Create contents with system prompt and all character images
@@ -102,7 +110,9 @@ class CharacterGenerator:
             )
 
             if not response or not response.candidates:
-                logger.warning("No response received from Gemini API for character generation")
+                logger.warning(
+                    "No response received from Gemini API for character generation"
+                )
                 return None
 
             generated_image = None
@@ -126,7 +136,8 @@ class CharacterGenerator:
                         extra={
                             "art_style": art_style,
                             "temp_path": temp_path,
-                            "character_name": character_name
+                            "character_name": character_name,
+                            "gender": gender,
                         },
                     )
                     logger.debug(
@@ -146,13 +157,16 @@ class CharacterGenerator:
                 "error_type": type(e).__name__,
                 "error_message": str(e),
                 "art_style": art_style,
-                "character_name": character_name
+                "character_name": character_name,
+                "gender": gender,
             }
-            
-            if hasattr(e, 'status_code'):
+
+            if hasattr(e, "status_code"):
                 error_details["status_code"] = e.status_code
-            if hasattr(e, 'response'):
+            if hasattr(e, "response"):
                 error_details["response"] = str(e.response)
-            
-            logger.error("Character generation failed", extra=error_details, exc_info=True)
+
+            logger.error(
+                "Character generation failed", extra=error_details, exc_info=True
+            )
             return None

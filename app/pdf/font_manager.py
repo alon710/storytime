@@ -4,7 +4,7 @@ import tempfile
 from typing import Optional
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from logger import logger
+from app.utils.logger import logger
 import requests
 
 

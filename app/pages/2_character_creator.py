@@ -7,8 +7,8 @@ import streamlit as st
 import os
 from PIL import Image
 from google import genai
-from character_generator import CharacterGenerator
-from config import settings
+from app.ai.character_generator import CharacterGenerator
+from app.utils.settings import settings
 
 
 def main():
@@ -60,6 +60,13 @@ def main():
             help="Choose the artistic style for the character reference",
         )
 
+        gender = st.selectbox(
+            "Gender",
+            ["Boy", "Girl"],
+            index=0,
+            help="Character gender for appropriate styling and features",
+        )
+
     st.divider()
 
     # Add validation for image count
@@ -82,6 +89,7 @@ def main():
                         character_images=character_images,
                         character_name=character_name,
                         character_age=character_age,
+                        gender=gender.lower(),
                         art_style=art_style.lower()
                         .replace(" ", "_")
                         .replace("studio_", ""),

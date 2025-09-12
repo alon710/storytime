@@ -3,7 +3,7 @@
 from typing import Optional
 from google import genai
 from google.genai import types
-from logger import logger
+from app.utils.logger import logger
 
 
 class ColorGenerator:

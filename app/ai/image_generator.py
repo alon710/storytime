@@ -6,7 +6,7 @@ from typing import Optional
 from PIL import Image
 from google import genai
 from google.genai import types
-from logger import logger
+from app.utils.logger import logger
 
 
 class ImageGenerator:
@@ -42,45 +42,49 @@ class ImageGenerator:
             context_info = (
                 f"\nStory context: {story_text}" if story_text.strip() else ""
             )
-            
+
             # Build previous pages context for visual consistency
             previous_context = ""
             if previous_pages:
                 previous_context = "\n\nPrevious illustrations for visual continuity:\n"
                 for i, page in enumerate(previous_pages[-3:], 1):  # Last 3 pages only
                     previous_context += f"Page {i} ({page.get('title', '')}): {page.get('illustration_prompt', '')}\n"
-                    
+
             # Load previous images for visual continuity
             previous_image_pils = []
             if previous_images:
                 # Limit to last 2-3 images to manage API request size
-                recent_images = previous_images[-3:] if len(previous_images) > 3 else previous_images
-                logger.info(
-                    "Including previous images for visual continuity", 
-                    extra={
-                        "page_title": page_title, 
-                        "previous_image_count": len(recent_images),
-                        "total_previous_images": len(previous_images)
-                    }
+                recent_images = (
+                    previous_images[-3:]
+                    if len(previous_images) > 3
+                    else previous_images
                 )
-                
+                logger.info(
+                    "Including previous images for visual continuity",
+                    extra={
+                        "page_title": page_title,
+                        "previous_image_count": len(recent_images),
+                        "total_previous_images": len(previous_images),
+                    },
+                )
+
                 for img_path in recent_images:
                     try:
                         previous_img = Image.open(img_path)
                         previous_image_pils.append(previous_img)
-                        logger.debug("Successfully loaded previous image", extra={"image_path": img_path})
+                        logger.debug(
+                            "Successfully loaded previous image",
+                            extra={"image_path": img_path},
+                        )
                     except Exception as e:
                         logger.warning(
-                            "Failed to load previous image", 
-                            extra={
-                                "image_path": img_path, 
-                                "error": str(e)
-                            }
+                            "Failed to load previous image",
+                            extra={"image_path": img_path, "error": str(e)},
                         )
 
             # Add context about character references and previous images
             character_context_note = f"Character reference: I have provided {len(character_image_pils)} reference photo(s) of {character_name}. Use all photos to capture the child's appearance, features, and characteristics accurately."
-            
+
             image_context_note = ""
             if previous_image_pils:
                 image_context_note = f"\n\nVisual reference: You are provided with {len(previous_image_pils)} previous illustration(s) from this storybook for visual consistency. Use these to maintain consistent character appearance, art style, and overall visual continuity."
@@ -110,8 +114,12 @@ class ImageGenerator:
             """
 
             # Include all character images, prompt, and any previous images in the API call
-            contents = [system_prompt, illustration_prompt] + character_image_pils + previous_image_pils
-            
+            contents = (
+                [system_prompt, illustration_prompt]
+                + character_image_pils
+                + previous_image_pils
+            )
+
             logger.debug(
                 "Sending generation request to Gemini",
                 extra={
@@ -119,8 +127,10 @@ class ImageGenerator:
                     "total_content_items": len(contents),
                     "character_images_count": len(character_image_pils),
                     "has_previous_images": len(previous_image_pils) > 0,
-                    "previous_pages_count": len(previous_pages) if previous_pages else 0
-                }
+                    "previous_pages_count": len(previous_pages)
+                    if previous_pages
+                    else 0,
+                },
             )
             response = self.client.models.generate_content(
                 model=self.model,
@@ -172,11 +182,11 @@ class ImageGenerator:
                 "error_type": type(e).__name__,
                 "error_message": str(e),
             }
-            
-            if hasattr(e, 'status_code'):
+
+            if hasattr(e, "status_code"):
                 error_details["status_code"] = e.status_code
-            if hasattr(e, 'response'):
+            if hasattr(e, "response"):
                 error_details["response"] = str(e.response)
-            
+
             logger.error("Image generation failed", extra=error_details, exc_info=True)
             return None
