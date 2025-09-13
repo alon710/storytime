@@ -3,7 +3,7 @@ import os
 import json
 from app.ai.story_processor import StoryProcessor
 from app.utils.settings import settings
-from app.utils.schemas import PageData
+from app.utils.schemas import PageData, GeneratedPage
 
 
 def convert_dict_to_pagedata(page_dict: dict) -> PageData:
@@ -54,6 +54,12 @@ def main():
 
     if "pages" not in st.session_state:
         st.session_state.pages = []
+
+    if "generated_pages" not in st.session_state:
+        st.session_state.generated_pages = []
+
+    if "preview_complete" not in st.session_state:
+        st.session_state.preview_complete = False
 
     # Story Template Selection
     st.header("Story Template (Optional)")
@@ -183,41 +189,130 @@ def main():
 
     st.divider()
 
-    if st.button("Generate Illustrated Storybook", type="primary", width="stretch"):
-        with st.spinner("Creating your illustrated storybook..."):
-            processor = StoryProcessor()
-            progress_bar = st.progress(0)
+    # Check if we have required inputs
+    has_required_inputs = (
+        st.session_state.pages
+        and character_images
+        and character_name
+        and character_age
+        and character_gender
+    )
 
-            pages_data = [
-                convert_dict_to_pagedata(page_dict=page)
-                for page in st.session_state.pages
-            ]
+    # Step 1: Generate Preview
+    if not st.session_state.preview_complete and has_required_inputs:
+        if st.button("Generate Preview with Images", type="primary", width="stretch"):
+            with st.spinner("Generating preview..."):
+                processor = StoryProcessor()
+                progress_bar = st.progress(0)
 
-            results = processor.process_story(
-                pages_data=pages_data,
-                character_images=character_images,
-                character_name=character_name,
-                character_age=character_age,
-                character_gender=character_gender,
-                progress_bar=progress_bar,
-            )
-            if results["success"]:
-                st.success("Illustrated storybook created successfully!")
-                if results["pdf_path"] and os.path.exists(results["pdf_path"]):
-                    with open(results["pdf_path"], "rb") as pdf_file:
-                        st.download_button(
-                            "Download PDF",
-                            data=pdf_file.read(),
-                            file_name="storybook.pdf",
-                            mime="application/pdf",
-                            width="stretch",
-                        )
+                pages_data = [
+                    convert_dict_to_pagedata(page_dict=page)
+                    for page in st.session_state.pages
+                ]
 
-                    st.info(
-                        f"Generated {results['pages_processed']} illustrations in {results['processing_time']:.1f} seconds"
+                generated_pages = processor.generate_preview(
+                    pages_data=pages_data,
+                    character_images=character_images,
+                    character_name=character_name,
+                    character_age=character_age,
+                    character_gender=character_gender,
+                    progress_bar=progress_bar,
+                )
+
+                if generated_pages:
+                    st.session_state.generated_pages = generated_pages
+                    st.session_state.preview_complete = True
+                    st.success(
+                        "Preview generated! You can now edit the text and create your PDF."
                     )
-            else:
-                st.error(f"Failed: {results.get('error', 'Unknown error')}")
+                    st.rerun()
+                else:
+                    st.error("Failed to generate preview")
+
+    # Step 2: Preview and Edit Interface
+    if st.session_state.preview_complete and st.session_state.generated_pages:
+        st.header("📖 Preview & Edit Your Storybook")
+        st.write(
+            "Review the generated images and text. You can edit the text before creating your final PDF."
+        )
+
+        for i, generated_page in enumerate(st.session_state.generated_pages):
+            with st.expander(
+                f"Page {i + 1}: {generated_page.page_data.title}", expanded=True
+            ):
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    st.subheader("Generated Image")
+                    if generated_page.image_path and os.path.exists(
+                        generated_page.image_path
+                    ):
+                        st.image(generated_page.image_path, width="stretch")
+                    else:
+                        st.error("Image not found")
+
+                with col2:
+                    st.subheader("Story Text")
+                    # Show editable text area
+                    current_text = (
+                        generated_page.edited_text
+                        if generated_page.edited_text
+                        else generated_page.personalized_text
+                    )
+
+                    edited_text = st.text_area(
+                        f"Edit text for page {i + 1}",
+                        value=current_text,
+                        height=150,
+                        key=f"edit_text_{i}",
+                        help="Edit this text as needed. This will appear in your final PDF.",
+                    )
+
+                    # Update the generated page with edited text if changed
+                    if edited_text != current_text:
+                        st.session_state.generated_pages[i].edited_text = edited_text
+
+        st.divider()
+
+        # Step 3: Create Final PDF
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.button("🔄 Regenerate Preview", width="stretch"):
+                st.session_state.preview_complete = False
+                st.session_state.generated_pages = []
+                st.rerun()
+
+        with col2:
+            if st.button("📄 Create Final PDF", type="primary", width="stretch"):
+                with st.spinner("Creating your personalized storybook PDF..."):
+                    processor = StoryProcessor()
+
+                    pdf_path = processor.create_pdf_from_preview(
+                        generated_pages=st.session_state.generated_pages,
+                        character_name=character_name,
+                        character_age=character_age,
+                        character_gender=character_gender,
+                    )
+
+                    if pdf_path and os.path.exists(pdf_path):
+                        st.success("🎉 Your personalized storybook is ready!")
+
+                        with open(pdf_path, "rb") as pdf_file:
+                            st.download_button(
+                                "📥 Download Your Storybook PDF",
+                                data=pdf_file.read(),
+                                file_name=f"{character_name}_storybook.pdf",
+                                mime="application/pdf",
+                                width="stretch",
+                            )
+                    else:
+                        st.error("Failed to create PDF")
+
+    elif not has_required_inputs:
+        st.info(
+            "👆 Please fill in all story pages, upload character photos, and complete book settings before generating your preview."
+        )
 
 
 main()

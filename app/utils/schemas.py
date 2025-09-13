@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Optional
 from pydantic import BaseModel
 
 
@@ -37,6 +38,13 @@ class PersonalizedPage(BaseModel):
 
 class PersonalizedStoryBook(BaseModel):
     personalized_pages: list[PersonalizedPage]
+
+
+class GeneratedPage(BaseModel):
+    page_data: PageData
+    personalized_text: str
+    image_path: Optional[str]
+    edited_text: Optional[str] = None
 
 
 class Colors(str, Enum):

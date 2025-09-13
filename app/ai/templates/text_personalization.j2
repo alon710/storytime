@@ -20,13 +20,15 @@ Requirements for BATCH processing:
 - Use appropriate pronouns consistently
 - Maintain warm, child-friendly tone throughout
 
-IMPORTANT: Return ONLY valid JSON with this exact structure (no other text before or after):
+Create a personalized version for each page that flows naturally from one to the next.
+
+Return your response in the following JSON format:
 {
   "personalized_pages": [{% for page in pages_data %}
     {
       "page_number": {{ loop.index }},
       "title": "{{ page.title }}",
-      "personalized_text": "your personalized text here"
+      "personalized_text": "your personalized text for this page"
     }{% if not loop.last %},{% endif %}{% endfor %}
   ]
 }

@@ -19,11 +19,15 @@ class BaseAIGenerator(ABC):
         self,
         contents: ContentListUnionDict,
         response_modalities: Optional[list[str]] = None,
+        config: Optional[types.GenerateContentConfig] = None,
     ) -> Optional[Any]:
+        if config is None:
+            config = types.GenerateContentConfig(response_modalities=response_modalities)
+
         response = self.client.models.generate_content(
             model=self.model,
             contents=contents,
-            config=types.GenerateContentConfig(response_modalities=response_modalities),
+            config=config,
         )
 
         if not response or not response.candidates:
