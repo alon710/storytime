@@ -19,3 +19,4 @@ class Suffix(str, Enum):
     jpg = ".jpg"
     jpeg = ".jpeg"
     ttf = ".ttf"
+    pdf = ".pdf"

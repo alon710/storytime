@@ -1,7 +1,7 @@
 """Main orchestrator for StoryTime storybook generation."""
 
-import os
 import time
+from typing import Optional
 
 from google import genai
 from app.utils.schemas import Gender
@@ -30,16 +30,14 @@ class StoryProcessor:
         character_gender: Gender,
         pages_data: list[dict],
         image_paths,
-        output_path: str,
-    ) -> str:
+    ) -> Optional[str]:
         return self.pdf_builder.create_booklet(
-            book_title,
-            character_name,
-            character_age,
-            character_gender,
-            pages_data,
-            image_paths,
-            output_path,
+            book_title=book_title,
+            character_name=character_name,
+            character_age=character_age,
+            character_gender=character_gender,
+            pages_data=pages_data,
+            image_paths=image_paths,
         )
 
     def process_story(
@@ -87,8 +85,13 @@ class StoryProcessor:
                 character_gender,
                 pages_data,
                 image_paths,
-                output_folder,
             )
+
+            if not pdf_path:
+                results["error"] = "Failed to create PDF"
+                if progress_bar:
+                    progress_bar.progress(0, "Error: PDF creation failed")
+                return results
 
             if progress_bar:
                 progress_bar.progress(100, "Complete!")

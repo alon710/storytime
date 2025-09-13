@@ -5,7 +5,8 @@ from reportlab.lib import colors as reportlab_colors
 from app.ai.text_personalizer import TextPersonalizer
 from app.pdf.font_manager import FontManager
 from app.utils.logger import logger
-from app.utils.schemas import Gender
+from app.utils.schemas import Gender, Suffix
+from app.utils.temp_file import save_bytes_to_temp
 
 
 class PDFBuilder:
@@ -22,10 +23,12 @@ class PDFBuilder:
         character_gender: Gender,
         pages_data: list[dict],
         image_paths: list[Optional[str]],
-        output_path: str,
-    ) -> str:
-        pdf_path = f"{output_path}/{book_title.replace(' ', '_')}_storybook.pdf"
-        c = canvas.Canvas(pdf_path, pagesize=A4)
+    ) -> Optional[str]:
+        import io
+        
+        # Create PDF in memory buffer
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=A4)
         width, height = A4
 
         logger.info(
@@ -57,11 +60,18 @@ class PDFBuilder:
             )
 
         c.save()
+        
+        # Save PDF buffer to temporary file
+        pdf_data = buffer.getvalue()
+        buffer.close()
+        
+        temp_pdf_path = save_bytes_to_temp(pdf_data, Suffix.pdf)
+        
         logger.info(
             "PDF creation completed",
-            pdf_path=pdf_path,
+            temp_pdf_path=temp_pdf_path,
         )
-        return pdf_path
+        return temp_pdf_path
 
     def _create_title_page(
         self,
