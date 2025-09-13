@@ -29,6 +29,16 @@ class PageData(BaseModel):
     illustration_prompt: str
 
 
+class PersonalizedPage(BaseModel):
+    page_number: int
+    title: str
+    personalized_text: str
+
+
+class PersonalizedStoryBook(BaseModel):
+    personalized_pages: list[PersonalizedPage]
+
+
 class Colors(str, Enum):
     PRIMARY = "#2C3E50"  # Soft charcoal for main text
     SECONDARY = "#E79771F5"  # Soft peach for text backgrounds

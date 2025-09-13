@@ -1,21 +1,32 @@
-"""Text personalization module for StoryTime."""
-
+import json
 from google import genai
 from app.utils.logger import logger
 from app.ai.base import BaseAIGenerator
-from app.utils.schemas import Gender, PageData
+from app.utils.schemas import Gender, PageData, PersonalizedPage, PersonalizedStoryBook
+from jinja2 import Template
 
 
 class TextPersonalizer(BaseAIGenerator):
-    """Handles AI-powered text personalization for age and gender-appropriate language."""
-
     def __init__(self, client: genai.Client, model: str):
-        """Initialize personalizer with GenAI client and model."""
         super().__init__(client, model)
 
     def generate(self, *args, **kwargs):
-        """Main generation method - delegates to personalize."""
         return self.personalize(*args, **kwargs)
+
+    def personalize_all_pages(
+        self,
+        pages_data: list[PageData],
+        character_name: str,
+        character_age: int,
+        character_gender: Gender,
+    ) -> PersonalizedStoryBook | None:
+        """Personalize all pages at once for better story continuity."""
+        return self._personalize_all_impl(
+            pages_data=pages_data,
+            character_name=character_name,
+            character_age=character_age,
+            character_gender=character_gender,
+        )
 
     def personalize(
         self,
@@ -33,6 +44,85 @@ class TextPersonalizer(BaseAIGenerator):
             previous_pages=previous_pages,
         )
 
+    def _personalize_all_impl(
+        self,
+        pages_data: list[PageData],
+        character_name: str,
+        character_age: int,
+        character_gender: Gender,
+    ) -> PersonalizedStoryBook | None:
+        """Personalize all pages using batch processing for better continuity."""
+
+        template: Template = self.env.get_template("text_personalization.j2")
+        prompt = template.render(
+            character_name=character_name,
+            character_age=character_age,
+            character_gender=character_gender.lower(),
+            is_batch_processing=True,
+            pages_data=pages_data,
+        )
+
+        response = self._generate_content([prompt])
+
+        if (
+            not response
+            or not response.candidates
+            or not response.candidates[0].content.parts
+        ):
+            logger.warning("No response from AI for batch personalization")
+            return None
+
+        response_text = ""
+        for part in response.candidates[0].content.parts:
+            if part.text is not None:
+                response_text += part.text.strip()
+
+        # Try to parse JSON response
+        try:
+            # Look for JSON in the response text
+            json_start = response_text.find("{")
+            json_end = response_text.rfind("}") + 1
+
+            if json_start != -1 and json_end > json_start:
+                json_text = response_text[json_start:json_end]
+                parsed_response = json.loads(json_text)
+                personalized_book = PersonalizedStoryBook(
+                    personalized_pages=[
+                        PersonalizedPage(
+                            page_number=page.get("page_number", i),
+                            title=page.get("title", ""),
+                            personalized_text=page.get("personalized_text", ""),
+                        )
+                        for i, page in enumerate(
+                            parsed_response.get("personalized_pages", [])
+                        )
+                    ]
+                )
+
+                logger.info(
+                    "Successfully personalized all pages",
+                    total_pages=len(pages_data),
+                    character_name=character_name,
+                    character_age=character_age,
+                )
+                return personalized_book
+            else:
+                logger.warning(
+                    "No JSON found in batch personalization response",
+                    response_preview=response_text[:200],
+                    character_name=character_name,
+                )
+                return None
+
+        except (json.JSONDecodeError, Exception) as e:
+            logger.warning(
+                "Failed to parse batch personalization response, falling back to individual processing",
+                error=str(e),
+                response_preview=response_text[:200],
+                character_name=character_name,
+            )
+            return None
+
     def _personalize_impl(
         self,
         text: str,
@@ -41,39 +131,19 @@ class TextPersonalizer(BaseAIGenerator):
         character_gender: Gender,
         previous_pages: list[PageData] | None = None,
     ) -> str | None:
-        # Build context from previous pages if provided
-        context_info = ""
-        if previous_pages:
-            context_info = "\n\nPrevious story context for continuity:\n"
-            for i, page in enumerate(previous_pages[-3:], 1):  # Last 3 pages only
-                context_info += f"Page {i}: {page.title} - {page.story_text}\n"
+        """Personalize a single page with context from previous pages."""
 
-            logger.info(
-                "Including previous pages for text personalization continuity",
-                previous_pages_count=len(previous_pages),
-                context_pages_used=min(3, len(previous_pages)),
-                total_context_length=len(context_info),
-            )
+        template: Template = self.env.get_template("text_personalization.j2")
+        prompt = template.render(
+            character_name=character_name,
+            character_age=character_age,
+            character_gender=character_gender.lower(),
+            is_batch_processing=False,
+            story_text=text,
+            previous_pages=previous_pages,
+        )
 
-        personalization_prompt = f"""
-        Rewrite this children's story text:
-        
-        Original: "{text}"{context_info}
-        
-        Requirements:
-        - Replace "hero" with {character_name}
-        - Use language appropriate for {character_age}-year-old {character_gender.lower()} But keep it as similar as possible to the original text
-        - Keep same story events and meaning
-        - Simple, engaging vocabulary for ages {max(2, character_age - 2)}-{character_age + 2}
-        - Warm, child-friendly tone
-        - Same approximate length
-        - Use appropriate pronouns
-        - Maintain narrative consistency with previous pages
-        
-        Return only the rewritten text.
-        """
-
-        response = self._generate_content([personalization_prompt])
+        response = self._generate_content([prompt])
 
         if (
             not response
@@ -82,6 +152,7 @@ class TextPersonalizer(BaseAIGenerator):
         ):
             personalized_text = None
 
+        personalized_text = None
         for part in response.candidates[0].content.parts:
             if part.text is not None:
                 personalized_text = part.text.strip()
@@ -102,3 +173,4 @@ class TextPersonalizer(BaseAIGenerator):
                 character_name=character_name,
                 had_previous_context=previous_pages is not None,
             )
+            return text.replace("hero", character_name)

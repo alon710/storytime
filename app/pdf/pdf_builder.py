@@ -3,7 +3,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors as reportlab_colors
 from app.ai.text_personalizer import TextPersonalizer
-from app.utils.schemas import Colors, Gender, Suffix, PageData
+from app.utils.schemas import Colors, Gender, Suffix, PageData, PersonalizedStoryBook
 from app.utils.temp_file import save_bytes_to_temp
 import io
 
@@ -26,12 +26,18 @@ class PDFBuilder:
         character_gender: Gender,
         pages_data: list[PageData],
         image_paths: list[Optional[str]],
+        personalized_book: PersonalizedStoryBook | None = None,
     ) -> Optional[str]:
         buffer = io.BytesIO()
         c = canvas.Canvas(buffer, pagesize=A4)
 
         for i, (page_data, image_path) in enumerate(zip(pages_data, image_paths)):
             previous_pages = pages_data[:i] if i > 0 else None
+
+            # Get personalized text if available
+            personalized_text = None
+            if personalized_book and i < len(personalized_book.personalized_pages):
+                personalized_text = personalized_book.personalized_pages[i].personalized_text
 
             self._create_story_page(
                 c=c,
@@ -41,6 +47,7 @@ class PDFBuilder:
                 character_age=character_age,
                 character_gender=character_gender,
                 previous_pages=previous_pages,
+                personalized_text=personalized_text,
             )
 
         c.save()
@@ -59,6 +66,7 @@ class PDFBuilder:
         character_age: int,
         character_gender: Gender,
         previous_pages: list[PageData] | None = None,
+        personalized_text: str | None = None,
     ):
         self._draw_fitted_image(
             c=c,
@@ -66,15 +74,19 @@ class PDFBuilder:
         )
 
         if story_text := page_data.story_text:
-            personalized_text = self.text_personalizer.personalize(
-                story_text,
-                character_name,
-                character_age,
-                character_gender,
-                previous_pages,
-            )
+            # Use pre-personalized text if available, otherwise personalize on the fly
+            final_text = personalized_text
+            if not final_text:
+                final_text = self.text_personalizer.personalize(
+                    story_text,
+                    character_name,
+                    character_age,
+                    character_gender,
+                    previous_pages,
+                )
 
-            self._draw_text_banner(c=c, text=personalized_text)
+            if final_text:
+                self._draw_text_banner(c=c, text=final_text)
 
         c.showPage()
 

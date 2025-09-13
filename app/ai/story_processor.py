@@ -5,7 +5,7 @@ import traceback
 from typing import Optional
 
 from google import genai
-from app.utils.schemas import Gender, PageData
+from app.utils.schemas import Gender, PageData, PersonalizedStoryBook
 from app.utils.settings import settings
 from app.ai.character_image_generator import CharacterImageGenerator
 from app.ai.text_personalizer import TextPersonalizer
@@ -30,6 +30,7 @@ class StoryProcessor:
         character_gender: Gender,
         pages_data: list[PageData],
         image_paths,
+        personalized_book: PersonalizedStoryBook | None = None,
     ) -> Optional[str]:
         return self.pdf_builder.create_book(
             character_name=character_name,
@@ -37,6 +38,7 @@ class StoryProcessor:
             character_gender=character_gender,
             pages_data=pages_data,
             image_paths=image_paths,
+            personalized_book=personalized_book,
         )
 
     def process_story(
@@ -59,6 +61,20 @@ class StoryProcessor:
         start_time = time.time()
 
         try:
+            # Personalize all text first for better story continuity
+            if progress_bar:
+                progress_bar.progress(5, "Personalizing story text...")
+
+            personalized_book = self.text_personalizer.personalize_all_pages(
+                pages_data=pages_data,
+                character_name=character_name,
+                character_age=character_age,
+                character_gender=character_gender,
+            )
+
+            if not personalized_book:
+                logger.warning("Batch personalization failed, will use individual personalization")
+
             image_paths = self._generate_all_images(
                 pages_data,
                 character_images,
@@ -66,13 +82,14 @@ class StoryProcessor:
                 character_age,
                 character_gender,
                 progress_bar,
+                personalized_book,
             )
 
             if not image_paths:
                 return results
 
             if progress_bar:
-                progress_bar.progress(85, "Creating PDF booklet...")
+                progress_bar.progress(90, "Creating PDF booklet...")
 
             pdf_path = self.create_pdf_booklet(
                 character_name=character_name,
@@ -80,6 +97,7 @@ class StoryProcessor:
                 character_gender=character_gender,
                 pages_data=pages_data,
                 image_paths=image_paths,
+                personalized_book=personalized_book,
             )
 
             if progress_bar:
@@ -110,14 +128,15 @@ class StoryProcessor:
         character_age,
         character_gender,
         progress_bar,
+        personalized_book: PersonalizedStoryBook | None = None,
     ):
         if progress_bar:
-            progress_bar.progress(30, "Generating illustrations...")
+            progress_bar.progress(10, "Generating illustrations...")
 
         image_paths = []
         for i, page_data in enumerate(pages_data):
             if progress_bar:
-                progress = 10 + (70 * (i + 1) / len(pages_data))
+                progress = 10 + (75 * (i + 1) / len(pages_data))
                 progress_bar.progress(
                     int(progress), f"Generating image {i + 1}/{len(pages_data)}..."
                 )
@@ -136,6 +155,11 @@ class StoryProcessor:
                 previous_images_count=len(previous_images) if previous_images else 0,
             )
 
+            # Use personalized text if available, otherwise use original
+            story_text_for_image = page_data.story_text
+            if personalized_book and i < len(personalized_book.personalized_pages):
+                story_text_for_image = personalized_book.personalized_pages[i].personalized_text
+
             image_path = self.image_generator.generate(
                 character_images,
                 character_name,
@@ -143,7 +167,7 @@ class StoryProcessor:
                 character_gender,
                 page_data.illustration_prompt,
                 page_data.title,
-                page_data.story_text,
+                story_text_for_image,
                 previous_pages,
                 previous_images,
             )
