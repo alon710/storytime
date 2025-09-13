@@ -1,15 +1,13 @@
-"""Main orchestrator for StoryTime storybook generation."""
+"""Main orchestrator for StoryTime story generation."""
 
-import time
 import traceback
-from typing import Optional
+from typing import Optional, List
 
 from google import genai
-from app.utils.schemas import Gender, PageData, PersonalizedStoryBook
+from app.utils.schemas import StoryMetadata, StoryTemplate, GeneratedPage
 from app.utils.settings import settings
-from app.ai.character_image_generator import CharacterImageGenerator
-from app.ai.text_personalizer import TextPersonalizer
-from app.pdf.pdf_builder import PDFBuilder
+from app.ai.image_generator import ImageGenerator
+from app.ai.text_processor import TextProcessor
 
 from app.utils.logger import logger
 
@@ -19,159 +17,90 @@ class StoryProcessor:
         client = genai.Client(api_key=settings.google_api_key)
         model = settings.model
 
-        self.image_generator = CharacterImageGenerator(client, model)
-        self.text_personalizer = TextPersonalizer(client, model)
-        self.pdf_builder = PDFBuilder(self.text_personalizer)
+        self.image_generator = ImageGenerator(client, model)
+        self.text_processor = TextProcessor(client, model)
 
-    def create_pdf_booklet(
+    def generate_story(
         self,
-        character_name: str,
-        character_age: int,
-        character_gender: Gender,
-        pages_data: list[PageData],
-        image_paths,
-        personalized_book: PersonalizedStoryBook | None = None,
-    ) -> Optional[str]:
-        return self.pdf_builder.create_book(
-            character_name=character_name,
-            character_age=character_age,
-            character_gender=character_gender,
-            pages_data=pages_data,
-            image_paths=image_paths,
-            personalized_book=personalized_book,
-        )
+        story_template: StoryTemplate,
+        seed_images: Optional[List] = None,
+        metadata: Optional[StoryMetadata] = None,
+        system_prompt: Optional[str] = None,
+        character_name: Optional[str] = None,
+        character_age: Optional[int] = None,
+        character_gender: Optional[str] = None,
+    ) -> List[GeneratedPage]:
+        """Generate story with text and images.
 
-    def process_story(
-        self,
-        pages_data: list[PageData],
-        character_images,
-        character_name: str,
-        character_age: int,
-        character_gender: Gender,
-        progress_bar=None,
-    ) -> dict:
-        results = {
-            "success": False,
-            "pages_processed": 0,
-            "error": None,
-            "pdf_path": None,
-            "processing_time": 0,
-        }
+        Args:
+            story_template: Template with pages to generate
+            seed_images: Optional seed images for visual reference
+            metadata: Optional metadata with instructions
+            system_prompt: Optional system prompt for generation
 
-        start_time = time.time()
+        Returns:
+            List of GeneratedPage objects with content and images
+        """
+        results = []
 
         try:
-            # Personalize all text first for better story continuity
-            if progress_bar:
-                progress_bar.progress(5, "Personalizing story text...")
-
-            personalized_book = self.text_personalizer.personalize_all_pages(
-                pages_data=pages_data,
+            # Process text for all pages with character info
+            processed_texts = self.text_processor.process_pages(
+                pages=story_template.pages,
+                metadata=metadata,
+                system_prompt=system_prompt,
                 character_name=character_name,
                 character_age=character_age,
-                character_gender=character_gender,
+                character_gender=character_gender
             )
 
-            if not personalized_book:
-                logger.warning("Batch personalization failed, will use individual personalization")
+            # Generate images for each page
+            for i, page in enumerate(story_template.pages):
+                logger.info(f"Generating content for page {i + 1}: {page.title}")
 
-            image_paths = self._generate_all_images(
-                pages_data,
-                character_images,
-                character_name,
-                character_age,
-                character_gender,
-                progress_bar,
-                personalized_book,
-            )
+                # Get processed text or use original
+                text = processed_texts.get(i, page.story_text) if processed_texts else page.story_text
 
-            if not image_paths:
-                return results
+                # Generate image
+                image_path = None
+                if seed_images or metadata:
+                    # Collect previous pages context
+                    previous_pages = [
+                        {"title": p.title, "text": p.text, "illustration_prompt": p.illustration_prompt}
+                        for p in results
+                    ] if results else None
 
-            if progress_bar:
-                progress_bar.progress(90, "Creating PDF booklet...")
+                    # Collect previous generated images for visual consistency
+                    previous_images = [
+                        p.image_path for p in results if p.image_path
+                    ] if results else None
 
-            pdf_path = self.create_pdf_booklet(
-                character_name=character_name,
-                character_age=character_age,
-                character_gender=character_gender,
-                pages_data=pages_data,
-                image_paths=image_paths,
-                personalized_book=personalized_book,
-            )
+                    image_path = self.image_generator.generate(
+                        seed_images=seed_images,
+                        illustration_prompt=page.illustration_prompt,
+                        page_title=page.title,
+                        story_text=text,
+                        metadata=metadata,
+                        system_prompt=system_prompt,
+                        previous_pages=previous_pages,
+                        previous_images=previous_images
+                    )
 
-            if progress_bar:
-                progress_bar.progress(100, "Complete!")
-
-            results.update(
-                {
-                    "success": True,
-                    "pdf_path": pdf_path,
-                    "pages_processed": len(pages_data),
-                    "processing_time": time.time() - start_time,
-                }
-            )
-
-        except Exception as e:
-            error_details = traceback.format_exc()
-            results["error"] = error_details
-            if progress_bar:
-                progress_bar.progress(0, f"Error: {str(e)}")
-
-        return results
-
-    def _generate_all_images(
-        self,
-        pages_data,
-        character_images,
-        character_name,
-        character_age,
-        character_gender,
-        progress_bar,
-        personalized_book: PersonalizedStoryBook | None = None,
-    ):
-        if progress_bar:
-            progress_bar.progress(10, "Generating illustrations...")
-
-        image_paths = []
-        for i, page_data in enumerate(pages_data):
-            if progress_bar:
-                progress = 10 + (75 * (i + 1) / len(pages_data))
-                progress_bar.progress(
-                    int(progress), f"Generating image {i + 1}/{len(pages_data)}..."
+                # Create GeneratedPage
+                generated_page = GeneratedPage(
+                    page_number=i + 1,
+                    title=page.title,
+                    text=text,
+                    illustration_prompt=page.illustration_prompt,
+                    image_path=image_path
                 )
 
-            previous_pages = (
-                [page.model_dump() for page in pages_data[:i]] if i > 0 else None
-            )
-            previous_images = image_paths[:i] if i > 0 else None
+                results.append(generated_page)
 
-            logger.info(
-                "Generating image with context",
-                page_number=i + 1,
-                total_pages=len(pages_data),
-                page_title=page_data.title,
-                previous_pages_count=len(previous_pages) if previous_pages else 0,
-                previous_images_count=len(previous_images) if previous_images else 0,
-            )
+            logger.info(f"Successfully generated {len(results)} pages")
+            return results
 
-            # Use personalized text if available, otherwise use original
-            story_text_for_image = page_data.story_text
-            if personalized_book and i < len(personalized_book.personalized_pages):
-                story_text_for_image = personalized_book.personalized_pages[i].personalized_text
-
-            image_path = self.image_generator.generate(
-                character_images,
-                character_name,
-                character_age,
-                character_gender,
-                page_data.illustration_prompt,
-                page_data.title,
-                story_text_for_image,
-                previous_pages,
-                previous_images,
-            )
-
-            image_paths.append(image_path)
-
-        return image_paths
+        except Exception as e:
+            logger.error(f"Failed to generate story: {str(e)}")
+            logger.error(traceback.format_exc())
+            return []
