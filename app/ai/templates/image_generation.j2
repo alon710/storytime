@@ -1,0 +1,30 @@
+Generate a storybook style children's book illustration without text.
+
+Page: "{{ page_title }}"
+Character: {{ character_name }} ({{ character_age }}-year-old {{ character_gender }})
+Character reference: I have provided {{ num_character_images }} reference photo(s) of {{ character_name }}. Use all photos to capture the child's appearance, features, and characteristics accurately.
+Request: {{ illustration_prompt }}{% if story_text and story_text.strip() %}
+Story context: {{ story_text }}{% endif %}{% if previous_pages %}
+
+Previous illustrations for visual continuity:
+{% for page in previous_pages[-3:] %}Page {{ loop.index }} ({{ page.get('title', '') }}): {{ page.get('illustration_prompt', '') }}
+{% endfor %}{% endif %}{% if num_previous_images > 0 %}
+
+Visual reference: You are provided with {{ num_previous_images }} previous illustration(s) from this storybook for visual consistency. Use these to maintain consistent character appearance, art style, and overall visual continuity.{% endif %}
+
+Requirements:
+- Use all character reference photos for visual consistency - synthesize features from all images
+- Maintain storybook style throughout book
+- Keep consistent character appearance and proportions based on all reference images
+- Create warm, child-friendly scene for ages 2-8
+- Single cohesive image without text or multiple panels
+- Maintain visual consistency with previous illustrations
+
+COMPOSITION REQUIREMENTS:
+- Generate image in A4 page aspect ratio (approximately 1:1.414 or 595x842 pixels)
+- Fill the ENTIRE image space with the scene - no borders, frames, or vignettes
+- Extend the scene to all edges of the canvas
+- No abstract backgrounds or wallpaper patterns - use full environmental scenes
+- Characters and objects should occupy meaningful space in the composition
+- Background should be a complete environment (room, outdoor scene, etc.) not abstract patterns
+- Avoid letterboxing or black bars by ensuring the scene fills the full A4 dimensions

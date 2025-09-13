@@ -1,10 +1,11 @@
 import streamlit as st
 import tomllib
+from pathlib import Path
 
 
 def get_version():
     try:
-        with open(file="pyproject.toml", mode="rb") as f:
+        with open(file=Path("pyproject.toml"), mode="rb") as f:
             data: dict = tomllib.load(f)
             return data["project"]["version"]
     except Exception:
@@ -21,13 +22,13 @@ version = get_version()
 
 
 story_generator = st.Page(
-    "pages/1_story_generator.py",
+    Path("app") / "pages" / "1_story_generator.py",
     title="Story Generator",
     icon="📚",
 )
 
 character_creator = st.Page(
-    "pages/2_character_creator.py",
+    Path("app") / "pages" / "2_character_creator.py",
     title="Character Creator",
     icon="🎨",
 )

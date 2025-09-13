@@ -7,8 +7,8 @@ import streamlit as st
 import os
 from PIL import Image
 from google import genai
-from character_generator import CharacterGenerator
-from config import settings
+from app.ai.character_generator import CharacterGenerator
+from app.utils.settings import settings
 
 
 def main():
@@ -60,6 +60,13 @@ def main():
             help="Choose the artistic style for the character reference",
         )
 
+        gender = st.selectbox(
+            "Gender",
+            ["Boy", "Girl"],
+            index=0,
+            help="Character gender for appropriate styling and features",
+        )
+
     st.divider()
 
     # Add validation for image count
@@ -71,7 +78,9 @@ def main():
         st.write(f"**{len(character_images)} photo(s) uploaded**")
 
         if st.button(
-            "Generate Character Reference", type="primary", use_container_width=True
+            "Generate Character Reference",
+            type="primary",
+            width="stretch",
         ):
             with st.spinner("Generating character reference with both poses..."):
                 try:
@@ -82,6 +91,7 @@ def main():
                         character_images=character_images,
                         character_name=character_name,
                         character_age=character_age,
+                        gender=gender.lower(),
                         art_style=art_style.lower()
                         .replace(" ", "_")
                         .replace("studio_", ""),
@@ -92,7 +102,7 @@ def main():
 
                         st.write("**Generated Character Reference:**")
                         generated_image = Image.open(result_path)
-                        st.image(generated_image, use_container_width=True)
+                        st.image(generated_image, width="stretch")
 
                         with open(result_path, "rb") as file:
                             image_data = file.read()
@@ -104,7 +114,7 @@ def main():
                             data=image_data,
                             file_name=filename,
                             mime="image/png",
-                            use_container_width=True,
+                            width="stretch",
                         )
 
                         try:
