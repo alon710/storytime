@@ -14,7 +14,7 @@ from app.utils.settings import settings
 def load_story_templates():
     """Load all JSON templates from story_templates directory"""
     templates = {}
-    template_dir = "story_templates"
+    template_dir = "app/story_templates"
 
     if os.path.exists(template_dir):
         for filename in os.listdir(template_dir):
@@ -47,7 +47,7 @@ def main():
     templates = load_story_templates()
 
     if templates:
-        template_options = ["None - Start from scratch"] + [
+        template_options = ["Start from scratch"] + [
             template["name"] for template in templates.values()
         ]
         template_keys = ["none"] + list(templates.keys())

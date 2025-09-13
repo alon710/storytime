@@ -6,7 +6,7 @@ import time
 from google import genai
 from app.utils.schemas import Gender
 from app.utils.settings import settings
-from app.ai.image_generator import ImageGenerator
+from app.ai.character_image_generator import CharacterImageGenerator
 from app.ai.text_personalizer import TextPersonalizer
 from app.pdf.pdf_builder import PDFBuilder
 
@@ -20,7 +20,7 @@ class StoryProcessor:
         client = genai.Client(api_key=settings.google_api_key)
         model = settings.model
 
-        self.image_generator = ImageGenerator(client, model)
+        self.image_generator = CharacterImageGenerator(client, model)
         self.text_personalizer = TextPersonalizer(client, model)
         self.pdf_builder = PDFBuilder(self.text_personalizer)
 

@@ -25,20 +25,12 @@ class TextPersonalizer(BaseAIGenerator):
         character_gender: Gender,
         previous_pages: list[dict] | None = None,
     ) -> str:
-        """Personalize story text for age and gender-appropriate language."""
-        result = self._with_error_handling(
-            "text personalization",
-            self._personalize_impl,
-            text,
-            character_name,
-            character_age,
-            character_gender,
-            previous_pages,
-        )
-        return (
-            result
-            if result is not None
-            else self._simple_replacement(text, character_name)
+        return self._personalize_impl(
+            text=text,
+            character_name=character_name,
+            character_age=character_age,
+            character_gender=character_gender,
+            previous_pages=previous_pages,
         )
 
     def _personalize_impl(
@@ -48,7 +40,7 @@ class TextPersonalizer(BaseAIGenerator):
         character_age: int,
         character_gender: Gender,
         previous_pages: list[dict] | None = None,
-    ) -> str:
+    ) -> str | None:
         # Build context from previous pages if provided
         context_info = ""
         if previous_pages:
@@ -82,8 +74,6 @@ class TextPersonalizer(BaseAIGenerator):
         """
 
         response = self._generate_content([personalization_prompt])
-        if response is None:
-            return self._simple_replacement(text, character_name)
 
         if (
             not response
@@ -112,8 +102,3 @@ class TextPersonalizer(BaseAIGenerator):
                 character_name=character_name,
                 had_previous_context=previous_pages is not None,
             )
-            return self._simple_replacement(text, character_name)
-
-    def _simple_replacement(self, text: str, character_name: str) -> str:
-        """Fallback method for simple hero-to-name replacement."""
-        return text.replace("hero", character_name).replace("Hero", character_name)

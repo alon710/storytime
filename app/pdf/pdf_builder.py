@@ -42,20 +42,18 @@ class PDFBuilder:
         for i, (page_data, image_path) in enumerate(zip(pages_data, image_paths)):
             c.showPage()  # New page
 
-            colors = None
-            # Pass previous pages as context for text personalization
             previous_pages = pages_data[:i] if i > 0 else None
+
             self._create_story_page(
-                c,
-                width,
-                height,
-                page_data,
-                image_path,
-                character_name,
-                character_age,
-                character_gender,
-                previous_pages,
-                colors,
+                c=c,
+                width=width,
+                height=height,
+                page_data=page_data,
+                image_path=image_path,
+                character_name=character_name,
+                character_age=character_age,
+                character_gender=character_gender,
+                previous_pages=previous_pages,
             )
 
         c.save()

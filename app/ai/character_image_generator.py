@@ -9,7 +9,7 @@ from app.utils.temp_file import save_image_to_temp
 from jinja2 import Template
 
 
-class ImageGenerator(BaseAIGenerator):
+class CharacterImageGenerator(BaseAIGenerator):
     def __init__(self, client: genai.Client, model: str):
         super().__init__(client, model)
 

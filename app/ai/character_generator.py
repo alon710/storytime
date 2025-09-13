@@ -23,14 +23,12 @@ class CharacterGenerator(BaseAIGenerator):
         art_style: ArtStyle = ArtStyle.cartoon,
         gender: Gender = Gender.boy,
     ) -> Optional[str]:
-        return self._with_error_handling(
-            "character pose generation",
-            self._generate_character_poses_impl,
-            character_images,
-            character_name,
-            character_age,
-            art_style,
-            gender,
+        return self._generate_character_poses_impl(
+            character_images=character_images,
+            character_name=character_name,
+            character_age=character_age,
+            art_style=art_style,
+            gender=gender,
         )
 
     def _generate_character_poses_impl(
