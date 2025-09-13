@@ -1,6 +1,7 @@
 """Main orchestrator for StoryTime storybook generation."""
 
 import time
+import traceback
 from typing import Optional
 
 from google import genai
@@ -24,7 +25,6 @@ class StoryProcessor:
 
     def create_pdf_booklet(
         self,
-        book_title: str,
         character_name: str,
         character_age: int,
         character_gender: Gender,
@@ -32,7 +32,6 @@ class StoryProcessor:
         image_paths,
     ) -> Optional[str]:
         return self.pdf_builder.create_book(
-            book_title=book_title,
             character_name=character_name,
             character_age=character_age,
             character_gender=character_gender,
@@ -47,15 +46,13 @@ class StoryProcessor:
         character_name: str,
         character_age: int,
         character_gender: Gender,
-        book_title: str,
-        output_folder: str,
         progress_bar=None,
     ) -> dict:
         results = {
             "success": False,
-            "pdf_path": None,
             "pages_processed": 0,
             "error": None,
+            "pdf_path": None,
             "processing_time": 0,
         }
 
@@ -68,7 +65,6 @@ class StoryProcessor:
                 character_name,
                 character_age,
                 character_gender,
-                book_title,
                 progress_bar,
             )
 
@@ -79,19 +75,12 @@ class StoryProcessor:
                 progress_bar.progress(85, "Creating PDF booklet...")
 
             pdf_path = self.create_pdf_booklet(
-                book_title,
                 character_name,
                 character_age,
                 character_gender,
                 pages_data,
                 image_paths,
             )
-
-            if not pdf_path:
-                results["error"] = "Failed to create PDF"
-                if progress_bar:
-                    progress_bar.progress(0, "Error: PDF creation failed")
-                return results
 
             if progress_bar:
                 progress_bar.progress(100, "Complete!")
@@ -106,7 +95,8 @@ class StoryProcessor:
             )
 
         except Exception as e:
-            results["error"] = str(e)
+            error_details = traceback.format_exc()
+            results["error"] = error_details
             if progress_bar:
                 progress_bar.progress(0, f"Error: {str(e)}")
 
@@ -119,7 +109,6 @@ class StoryProcessor:
         character_name,
         character_age,
         character_gender,
-        book_title,
         progress_bar,
     ):
         if progress_bar:
@@ -151,17 +140,11 @@ class StoryProcessor:
                 character_age,
                 character_gender,
                 page_data.illustration_prompt,
-                book_title,
                 page_data.title,
                 page_data.story_text,
                 previous_pages,
                 previous_images,
             )
-
-            if image_path is None:
-                if progress_bar:
-                    progress_bar.progress(0, "Error: Image generation failed")
-                return None
 
             image_paths.append(image_path)
 

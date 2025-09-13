@@ -1,12 +1,6 @@
-"""
-StoryTime Story Generator Page
-Create custom illustrated PDF storybooks with dynamic page creation
-"""
-
 import streamlit as st
 import os
 import json
-from pathlib import Path
 from app.ai.story_processor import StoryProcessor
 from app.utils.settings import settings
 from app.utils.schemas import PageData
@@ -17,16 +11,18 @@ def convert_dict_to_pagedata(page_dict: dict) -> PageData:
     return PageData(
         title=page_dict.get("title", ""),
         story_text=page_dict.get("story_text", ""),
-        illustration_prompt=page_dict.get("illustration_prompt", "")
+        illustration_prompt=page_dict.get("illustration_prompt", ""),
     )
+
 
 def convert_pagedata_to_dict(page_data: PageData) -> dict:
     """Convert PageData object to dictionary for session state."""
     return {
         "title": page_data.title,
         "story_text": page_data.story_text,
-        "illustration_prompt": page_data.illustration_prompt
+        "illustration_prompt": page_data.illustration_prompt,
     }
+
 
 def load_story_templates():
     """Load all JSON templates from story_templates directory"""
@@ -87,15 +83,11 @@ def main():
             if selected_index == 0:
                 # "None" selected - clear pages
                 st.session_state.pages = []
-                st.session_state.book_title = "My Adventure"
             else:
                 # Template selected - load it
                 selected_template_key = template_keys[selected_index]
                 selected_template = templates[selected_template_key]
                 st.session_state.pages = selected_template["pages"]
-                st.session_state.book_title = selected_template.get(
-                    "default_title", "My Adventure"
-                )
 
             st.rerun()
 
@@ -111,15 +103,10 @@ def main():
     st.divider()
 
     st.header("Book Settings")
-    col1, col2 = st.columns(2)
+    (col1,) = st.columns(1)
 
     with col1:
-        # Use session state book title if it exists (from template), otherwise default
-        default_book_title = st.session_state.get("book_title", "My Adventure")
-        book_title = st.text_input("Book Title", value=default_book_title)
         character_name = st.text_input("Character Name", value="Alex")
-
-    with col2:
         character_gender = st.selectbox("Gender", ["Girl", "Boy"])
         character_age = st.number_input("Age", min_value=1, max_value=12, value=5)
 
@@ -197,61 +184,40 @@ def main():
     st.divider()
 
     if st.button("Generate Illustrated Storybook", type="primary", width="stretch"):
-        missing_fields = []
-        if not character_images:
-            missing_fields.append("Character Photos")
-        if not character_name.strip():
-            missing_fields.append("Character Name")
-        if not book_title.strip():
-            missing_fields.append("Book Title")
+        with st.spinner("Creating your illustrated storybook..."):
+            processor = StoryProcessor()
+            progress_bar = st.progress(0)
 
-        empty_prompts = []
-        for i, page in enumerate(st.session_state.pages):
-            if not page["illustration_prompt"].strip():
-                empty_prompts.append(f"Page {i + 1}")
+            pages_data = [
+                convert_dict_to_pagedata(page_dict=page)
+                for page in st.session_state.pages
+            ]
 
-        if missing_fields:
-            st.error(f"Please provide: {', '.join(missing_fields)}")
-        elif empty_prompts:
-            st.error(f"Please add illustration prompts for: {', '.join(empty_prompts)}")
-        else:
-            output_path = Path.cwd()
-
-            with st.spinner("Creating your illustrated storybook..."):
-                processor = StoryProcessor()
-                progress_bar = st.progress(0)
-
-                # Convert session state pages to PageData objects
-                pages_data = [convert_dict_to_pagedata(page) for page in st.session_state.pages]
-                
-                results = processor.process_story(
-                    pages_data=pages_data,
-                    character_images=character_images,
-                    character_name=character_name,
-                    character_age=character_age,
-                    character_gender=character_gender,
-                    book_title=book_title,
-                    output_folder=str(output_path),
-                    progress_bar=progress_bar,
-                )
-
-                if results["success"]:
-                    st.success("Illustrated storybook created successfully!")
-                    if results["pdf_path"] and os.path.exists(results["pdf_path"]):
-                        with open(results["pdf_path"], "rb") as pdf_file:
-                            st.download_button(
-                                "Download PDF",
-                                data=pdf_file.read(),
-                                file_name=f"{book_title.replace(' ', '_')}_storybook.pdf",
-                                mime="application/pdf",
-                                width="stretch",
-                            )
-
-                        st.info(
-                            f"Generated {results['pages_processed']} illustrations in {results['processing_time']:.1f} seconds"
+            results = processor.process_story(
+                pages_data=pages_data,
+                character_images=character_images,
+                character_name=character_name,
+                character_age=character_age,
+                character_gender=character_gender,
+                progress_bar=progress_bar,
+            )
+            if results["success"]:
+                st.success("Illustrated storybook created successfully!")
+                if results["pdf_path"] and os.path.exists(results["pdf_path"]):
+                    with open(results["pdf_path"], "rb") as pdf_file:
+                        st.download_button(
+                            "Download PDF",
+                            data=pdf_file.read(),
+                            file_name="storybook.pdf",
+                            mime="application/pdf",
+                            width="stretch",
                         )
-                else:
-                    st.error(f"Failed: {results.get('error', 'Unknown error')}")
+
+                    st.info(
+                        f"Generated {results['pages_processed']} illustrations in {results['processing_time']:.1f} seconds"
+                    )
+            else:
+                st.error(f"Failed: {results.get('error', 'Unknown error')}")
 
 
 main()

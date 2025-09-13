@@ -3,9 +3,8 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors as reportlab_colors
 from app.ai.text_personalizer import TextPersonalizer
-from app.pdf.font_manager import FontManager
 from app.utils.logger import logger
-from app.utils.schemas import Gender, Suffix, PageData
+from app.utils.schemas import Colors, Gender, Suffix, PageData
 from app.utils.temp_file import save_bytes_to_temp
 import io
 
@@ -13,12 +12,10 @@ import io
 class PDFBuilder:
     def __init__(self, text_personalizer: TextPersonalizer):
         self.text_personalizer = text_personalizer
-        self.font_manager = FontManager()
-        self.fonts = self.font_manager.setup_fonts()
+        self.font = "Helvetica"
 
     def create_book(
         self,
-        book_title: str,
         character_name: str,
         character_age: int,
         character_gender: Gender,
@@ -29,24 +26,8 @@ class PDFBuilder:
         c = canvas.Canvas(buffer, pagesize=A4)
         width, height = A4
 
-        logger.info(
-            "Starting PDF creation with child-friendly styling",
-            book_title=book_title,
-            total_pages=len(pages_data),
-            fonts_available=self.fonts,
-        )
-
-        self._create_title_page(
-            c=c,
-            width=width,
-            height=height,
-            book_title=book_title,
-            character_age=character_age,
-        )
-
         for i, (page_data, image_path) in enumerate(zip(pages_data, image_paths)):
             c.showPage()
-
             previous_pages = pages_data[:i] if i > 0 else None
 
             self._create_story_page(
@@ -74,44 +55,6 @@ class PDFBuilder:
         )
         return temp_pdf_path
 
-    def _create_title_page(
-        self,
-        c: canvas.Canvas,
-        width: float,
-        height: float,
-        book_title: str,
-        character_age: int,
-    ):
-        """Create playful title page with child-friendly styling."""
-        # Background gradient effect using rectangles
-        self._draw_gradient_background(c, width, height, "#FFF8E7", "#E8F4FD")
-
-        # Title with playful font
-        title_font = self.fonts["title"]
-        c.setFont(title_font, 32)
-        c.setFillColor(reportlab_colors.HexColor("#2E4057"))  # Dark blue-gray
-
-        # Center the title
-        title_width = c.stringWidth(book_title, title_font, 32)
-        x = (width - title_width) / 2
-        c.drawString(x, height - 150, book_title)
-
-        # Decorative subtitle with smaller playful font
-        c.setFont(self.fonts["body"], 16)
-        c.setFillColor(reportlab_colors.HexColor("#7B8FA4"))  # Lighter blue-gray
-        subtitle = f"A Magical Adventure for {character_age}-Year-Olds"
-        subtitle_width = c.stringWidth(subtitle, self.fonts["body"], 16)
-        x = (width - subtitle_width) / 2
-        c.drawString(x, height - 200, subtitle)
-
-        # AI attribution at bottom
-        c.setFont(self.fonts["body"], 10)
-        c.setFillColor(reportlab_colors.HexColor("#A0A8B5"))
-        attribution = "AI-Generated Illustrated Storybook"
-        attr_width = c.stringWidth(attribution, self.fonts["body"], 10)
-        x = (width - attr_width) / 2
-        c.drawString(x, 60, attribution)
-
     def _create_story_page(
         self,
         c: canvas.Canvas,
@@ -124,27 +67,20 @@ class PDFBuilder:
         character_gender: Gender,
         previous_pages: list[PageData] | None = None,
     ):
-        colors = {"background": "#FFF8E7", "banner": "#E8F4FD", "accent": "#FFE4E1"}
-        c.setFillColor(reportlab_colors.HexColor(colors["background"]))
+        c.setFillColor(reportlab_colors.HexColor(val=Colors.BACKGROUND))
         c.rect(x=0, y=0, width=width, height=height, stroke=0, fill=1)
 
-        image_margin: int = 20
         if image_path:
-            img_width = width - (2 * image_margin)
-            img_height = height - 120
+            img_width = width
+            img_height = height
             c.drawImage(
                 image=image_path,
-                x=image_margin,
-                y=60,
+                x=0,
+                y=0,
                 width=img_width,
                 height=img_height,
                 preserveAspectRatio=True,
             )
-
-        banner_height: int = 80
-
-        c.setFillColor(aColor=reportlab_colors.HexColor(val=colors["banner"]))
-        self._draw_rounded_rect(c, 0, 0, width, banner_height, 0)
 
         story_text = page_data.story_text
         if story_text.strip():
@@ -156,33 +92,25 @@ class PDFBuilder:
                 previous_pages,
             )
 
-            # Text styling
-            c.setFont(self.fonts["body"], 14)
-            c.setFillColor(reportlab_colors.HexColor("#2E4057"))  # Dark text
+            c.setFillColor(reportlab_colors.HexColor(val=Colors.BANNER))
 
-            # Text with padding in banner
-            text_margin = 20
             self._draw_wrapped_text_in_banner(
-                c,
-                personalized_text,
-                text_margin,
-                banner_height - 15,
-                width - (2 * text_margin),
-                18,
+                c=c,
+                text=personalized_text,
+                x=20,
+                y=height - (2 * 20),
+                max_width=width - (2 * 20),
+                line_height=18,
             )
 
         # Page title overlay at top with semi-transparent background
-        title_banner_height = 40
-        c.setFillColor(reportlab_colors.HexColor(colors["accent"]))
-        c.setStrokeColor(reportlab_colors.HexColor(colors["accent"]))
-        self._draw_rounded_rect(
-            c, 20, height - title_banner_height - 20, width - 40, title_banner_height, 8
-        )
+        c.setFillColor(reportlab_colors.HexColor(val=Colors.ACCENT))
+        c.setStrokeColor(reportlab_colors.HexColor(val=Colors.ACCENT))
 
         # Title text
-        c.setFont(self.fonts["title"], 18)
+        c.setFont(self.font, 18)
         c.setFillColor(reportlab_colors.HexColor("#2E4057"))
-        title_width = c.stringWidth(page_data.title, self.fonts["title"], 18)
+        title_width = c.stringWidth(page_data.title, self.font, 18)
         title_x = (width - title_width) / 2
         c.drawString(title_x, height - 40, page_data.title)
 
@@ -195,11 +123,10 @@ class PDFBuilder:
         max_width: float,
         line_height: float,
     ):
-        """Draw text with word wrapping optimized for text banner."""
         words = text.split()
         lines = []
         current_line = ""
-        font_name = self.fonts["body"]
+        font_name = self.font
         font_size = 14
 
         for word in words:
@@ -223,36 +150,6 @@ class PDFBuilder:
             line_width = c.stringWidth(line, font_name, font_size)
             line_x = x + (max_width - line_width) / 2
             c.drawString(line_x, start_y - (i * line_height), line)
-
-    def _draw_rounded_rect(
-        self,
-        c: canvas.Canvas,
-        x: float,
-        y: float,
-        width: float,
-        height: float,
-        radius: float,
-    ):
-        """Draw a rounded rectangle."""
-        if radius == 0:
-            c.rect(x, y, width, height, stroke=0, fill=1)
-            return
-
-        c.roundRect(x, y, width, height, radius, stroke=0, fill=1)
-
-    def _draw_gradient_background(
-        self, c: canvas.Canvas, width: float, height: float, color1: str, color2: str
-    ):
-        """Draw a simple gradient effect using multiple rectangles."""
-        steps = 20
-        step_height = height / steps
-
-        for i in range(steps):
-            # Simple linear interpolation between colors
-            i / steps
-            # For simplicity, just use the first color - real gradients are complex in ReportLab
-            c.setFillColor(reportlab_colors.HexColor(color1))
-            c.rect(0, i * step_height, width, step_height, stroke=0, fill=1)
 
     def _draw_wrapped_text(
         self,

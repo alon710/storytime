@@ -20,7 +20,6 @@ class CharacterImageGenerator(BaseAIGenerator):
         character_age: int,
         character_gender: Gender,
         illustration_prompt: str,
-        book_title: str,
         page_title: str,
         story_text: str = "",
         previous_pages: list[dict] | None = None,
@@ -32,7 +31,6 @@ class CharacterImageGenerator(BaseAIGenerator):
             character_age,
             character_gender,
             illustration_prompt,
-            book_title,
             page_title,
             story_text,
             previous_pages,
@@ -46,7 +44,6 @@ class CharacterImageGenerator(BaseAIGenerator):
         character_age: int,
         character_gender: Gender,
         illustration_prompt: str,
-        book_title: str,
         page_title: str,
         story_text: str = "",
         previous_pages: list[dict] | None = None,
@@ -62,7 +59,6 @@ class CharacterImageGenerator(BaseAIGenerator):
             previous_image_inputs = [Image.open(img_path) for img_path in recent_images]
 
         system_prompt = self._build_system_prompt(
-            book_title=book_title,
             page_title=page_title,
             character_name=character_name,
             character_age=character_age,
@@ -111,7 +107,6 @@ class CharacterImageGenerator(BaseAIGenerator):
 
     def _build_system_prompt(
         self,
-        book_title: str,
         page_title: str,
         character_name: str,
         character_age: int,
@@ -124,7 +119,6 @@ class CharacterImageGenerator(BaseAIGenerator):
     ) -> str:
         template: Template = self.env.get_template("image_generation.j2")
         return template.render(
-            book_title=book_title,
             page_title=page_title,
             character_name=character_name,
             character_age=character_age,
