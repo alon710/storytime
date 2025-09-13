@@ -130,7 +130,11 @@ class PDFBuilder:
             c.drawString(x, y - (i * line_height), line)
 
     def _register_fonts(self):
-        """Register Comic Neue fonts with ReportLab."""
+        """Register Comic Neue fonts with ReportLab, fallback to system fonts."""
+        # Start with fallback fonts as default
+        self.regular_font = self.fallback_font
+        self.bold_font = self.fallback_font
+        
         try:
             # Get the absolute path to the fonts directory
             current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -139,22 +143,39 @@ class PDFBuilder:
             regular_font_path = os.path.join(fonts_dir, "ComicNeue-Regular.ttf")
             bold_font_path = os.path.join(fonts_dir, "ComicNeue-Bold.ttf")
             
+            # Only try to register fonts if they exist and are valid TTF files
             if os.path.exists(regular_font_path):
-                pdfmetrics.registerFont(TTFont(self.regular_font, regular_font_path))
-                logger.info("Registered Comic Neue Regular font")
-            else:
-                logger.warning(f"Comic Neue Regular font not found at {regular_font_path}")
-                self.regular_font = self.fallback_font
-                
+                try:
+                    # Validate it's a real TTF file by reading the header
+                    with open(regular_font_path, 'rb') as f:
+                        header = f.read(4)
+                        if header in [b'\x00\x01\x00\x00', b'OTTO', b'true']:  # TTF/OTF signatures
+                            pdfmetrics.registerFont(TTFont("ComicNeue-Regular", regular_font_path))
+                            self.regular_font = "ComicNeue-Regular"
+                            logger.info("Registered Comic Neue Regular font")
+                        else:
+                            logger.warning(f"File at {regular_font_path} is not a valid font file")
+                except Exception as e:
+                    logger.warning(f"Failed to register regular font: {e}")
+                    
             if os.path.exists(bold_font_path):
-                pdfmetrics.registerFont(TTFont(self.bold_font, bold_font_path))
-                logger.info("Registered Comic Neue Bold font")
-            else:
-                logger.warning(f"Comic Neue Bold font not found at {bold_font_path}")
-                self.bold_font = self.fallback_font
+                try:
+                    # Validate it's a real TTF file by reading the header
+                    with open(bold_font_path, 'rb') as f:
+                        header = f.read(4)
+                        if header in [b'\x00\x01\x00\x00', b'OTTO', b'true']:  # TTF/OTF signatures
+                            pdfmetrics.registerFont(TTFont("ComicNeue-Bold", bold_font_path))
+                            self.bold_font = "ComicNeue-Bold"
+                            logger.info("Registered Comic Neue Bold font")
+                        else:
+                            logger.warning(f"File at {bold_font_path} is not a valid font file")
+                except Exception as e:
+                    logger.warning(f"Failed to register bold font: {e}")
+                
+            logger.info(f"Using fonts - Regular: {self.regular_font}, Bold: {self.bold_font}")
                 
         except Exception as e:
-            logger.error(f"Failed to register fonts: {e}")
+            logger.warning(f"Font registration error: {e}. Using fallback fonts.")
             self.regular_font = self.fallback_font
             self.bold_font = self.fallback_font
 
