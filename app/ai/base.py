@@ -1,5 +1,3 @@
-"""Base class for AI generators in StoryTime."""
-
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional, Any
@@ -7,6 +5,7 @@ from google import genai
 from google.genai import types
 from jinja2 import Environment, FileSystemLoader
 from app.utils.logger import logger
+from google.genai.types import ContentListUnionDict
 
 
 class BaseAIGenerator(ABC):
@@ -16,47 +15,11 @@ class BaseAIGenerator(ABC):
         template_dir = Path(__file__).parent / "templates"
         self.env = Environment(loader=FileSystemLoader(str(template_dir)))
 
-    def _with_error_handling(self, operation_name: str, func, *args, **kwargs):
-        try:
-            logger.debug("Starting ai operation", operation=operation_name)
-
-            result = func(*args, **kwargs)
-
-            if result is not None:
-                logger.info(
-                    "Operation was successfully completed", operation=operation_name
-                )
-            else:
-                logger.warning(
-                    "Operation completed but returned no result",
-                    operation=operation_name,
-                )
-
-            return result
-
-        except Exception as e:
-            error_details = {
-                "operation": operation_name,
-                "error_type": type(e).__name__,
-                "error_message": str(e),
-            }
-
-            if hasattr(e, "status_code"):
-                error_details["status_code"] = e.status_code
-            if hasattr(e, "response"):
-                error_details["response"] = str(e.response)
-
-            logger.error("AI operation failed", error_details, exc_info=True)
-            return None
-
     def _generate_content(
         self,
-        contents: list[Any],
+        contents: ContentListUnionDict,
         response_modalities: Optional[list[str]] = None,
     ) -> Optional[Any]:
-        if response_modalities is None:
-            response_modalities = ["Text"]
-
         response = self.client.models.generate_content(
             model=self.model,
             contents=contents,
@@ -64,24 +27,13 @@ class BaseAIGenerator(ABC):
         )
 
         if not response or not response.candidates:
-            logger.warning("No response received from Gemini API")
+            logger.warning(
+                "No response received from Gemini API",
+                classname=self.__class__.__name__,
+            )
             return None
 
         return response
-
-    def _extract_text_response(self, response) -> Optional[str]:
-        if (
-            not response
-            or not response.candidates
-            or not response.candidates[0].content.parts
-        ):
-            return None
-
-        for part in response.candidates[0].content.parts:
-            if part.text is not None:
-                return part.text.strip()
-
-        return None
 
     @abstractmethod
     def generate(self, *args, **kwargs):

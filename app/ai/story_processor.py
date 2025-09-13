@@ -4,6 +4,7 @@ import os
 import time
 
 from google import genai
+from app.utils.schemas import Gender
 from app.utils.settings import settings
 from app.ai.image_generator import ImageGenerator
 from app.ai.text_personalizer import TextPersonalizer
@@ -28,7 +29,7 @@ class StoryProcessor:
         character_images,
         character_name: str,
         character_age: int,
-        character_gender: str,
+        character_gender: Gender,
         illustration_prompt: str,
         book_title: str,
         page_title: str,
@@ -55,7 +56,7 @@ class StoryProcessor:
         book_title: str,
         character_name: str,
         character_age: int,
-        character_gender: str,
+        character_gender: Gender,
         pages_data: list[dict],
         image_paths,
         output_path: str,
@@ -77,7 +78,7 @@ class StoryProcessor:
         character_images,
         character_name: str,
         character_age: int,
-        character_gender: str,
+        character_gender: Gender,
         book_title: str,
         output_folder: str,
         progress_bar=None,

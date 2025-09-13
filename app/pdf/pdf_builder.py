@@ -5,6 +5,7 @@ from reportlab.lib import colors as reportlab_colors
 from app.ai.text_personalizer import TextPersonalizer
 from app.pdf.font_manager import FontManager
 from app.utils.logger import logger
+from app.utils.schemas import Gender
 
 
 class PDFBuilder:
@@ -18,7 +19,7 @@ class PDFBuilder:
         book_title: str,
         character_name: str,
         character_age: int,
-        character_gender: str,
+        character_gender: Gender,
         pages_data: list[dict],
         image_paths: list[Optional[str]],
         output_path: str,
@@ -111,7 +112,7 @@ class PDFBuilder:
         image_path: Optional[str],
         character_name: str,
         character_age: int,
-        character_gender: str,
+        character_gender: Gender,
         previous_pages: list[dict] | None = None,
     ):
         colors = {"background": "#FFF8E7", "banner": "#E8F4FD", "accent": "#FFE4E1"}

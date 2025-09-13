@@ -3,6 +3,7 @@
 from google import genai
 from app.utils.logger import logger
 from app.ai.base import BaseAIGenerator
+from app.utils.schemas import Gender
 
 
 class TextPersonalizer(BaseAIGenerator):
@@ -21,7 +22,7 @@ class TextPersonalizer(BaseAIGenerator):
         text: str,
         character_name: str,
         character_age: int,
-        character_gender: str,
+        character_gender: Gender,
         previous_pages: list[dict] | None = None,
     ) -> str:
         """Personalize story text for age and gender-appropriate language."""
@@ -45,7 +46,7 @@ class TextPersonalizer(BaseAIGenerator):
         text: str,
         character_name: str,
         character_age: int,
-        character_gender: str,
+        character_gender: Gender,
         previous_pages: list[dict] | None = None,
     ) -> str:
         # Build context from previous pages if provided
@@ -84,7 +85,17 @@ class TextPersonalizer(BaseAIGenerator):
         if response is None:
             return self._simple_replacement(text, character_name)
 
-        personalized_text = self._extract_text_response(response)
+        if (
+            not response
+            or not response.candidates
+            or not response.candidates[0].content.parts
+        ):
+            personalized_text = None
+
+        for part in response.candidates[0].content.parts:
+            if part.text is not None:
+                personalized_text = part.text.strip()
+
         if personalized_text:
             logger.info(
                 "Successfully personalized story text",

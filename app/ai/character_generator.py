@@ -39,7 +39,7 @@ class CharacterGenerator(BaseAIGenerator):
         character_name: str,
         character_age: int,
         art_style: str,
-        gender: str,
+        gender: Gender,
     ) -> Optional[str]:
         character_image_pils = self._prepare_character_images(character_images)
         character_info = self._build_character_info(
@@ -72,7 +72,10 @@ class CharacterGenerator(BaseAIGenerator):
         return character_image_pils
 
     def _build_character_info(
-        self, character_name: str, character_age: int, gender: str
+        self,
+        character_name: str,
+        character_age: int,
+        gender: Gender,
     ) -> str:
         character_info = ""
         if character_name:
@@ -82,7 +85,7 @@ class CharacterGenerator(BaseAIGenerator):
 
     def _build_system_prompt(
         self,
-        gender: str,
+        gender: Gender,
         character_info: str,
         num_images: int,
         art_style: str,
@@ -102,7 +105,7 @@ class CharacterGenerator(BaseAIGenerator):
         art_style: str,
         character_name: str,
         character_age: int,
-        gender: str,
+        gender: Gender,
         num_images: int,
     ):
         logger.debug(
@@ -115,7 +118,11 @@ class CharacterGenerator(BaseAIGenerator):
         )
 
     def _process_generation_response(
-        self, response, art_style: str, character_name: str, gender: str
+        self,
+        response,
+        art_style: str,
+        character_name: str,
+        gender: Gender,
     ) -> Optional[str]:
         generated_image = None
         response_text = ""
@@ -129,10 +136,6 @@ class CharacterGenerator(BaseAIGenerator):
 
                 temp_path = self._save_generated_image(generated_image)
 
-                self._log_generation_success(
-                    art_style, temp_path, character_name, gender
-                )
-                self._log_response_text(response_text)
                 return temp_path
 
         logger.warning(
@@ -145,20 +148,3 @@ class CharacterGenerator(BaseAIGenerator):
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
             generated_image.save(tmp_file.name, "PNG")
             return tmp_file.name
-
-    def _log_generation_success(
-        self, art_style: str, temp_path: str, character_name: str, gender: str
-    ):
-        logger.info(
-            "Successfully generated character reference poses",
-            art_style=art_style,
-            temp_path=temp_path,
-            character_name=character_name,
-            gender=gender,
-        )
-
-    def _log_response_text(self, response_text: str):
-        logger.debug(
-            "Gemini character generation response",
-            response_text=response_text[:200],
-        )
