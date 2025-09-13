@@ -26,6 +26,9 @@ class StoryProcessor:
         seed_images: Optional[List] = None,
         metadata: Optional[StoryMetadata] = None,
         system_prompt: Optional[str] = None,
+        character_name: Optional[str] = None,
+        character_age: Optional[int] = None,
+        character_gender: Optional[str] = None,
     ) -> List[GeneratedPage]:
         """Generate story with text and images.
 
@@ -41,11 +44,14 @@ class StoryProcessor:
         results = []
 
         try:
-            # Process text for all pages
+            # Process text for all pages with character info
             processed_texts = self.text_processor.process_pages(
                 pages=story_template.pages,
                 metadata=metadata,
-                system_prompt=system_prompt
+                system_prompt=system_prompt,
+                character_name=character_name,
+                character_age=character_age,
+                character_gender=character_gender
             )
 
             # Generate images for each page

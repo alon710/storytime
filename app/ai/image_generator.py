@@ -45,23 +45,28 @@ class ImageGenerator(BaseAIGenerator):
             for img in character_images:
                 image_inputs.append(PILImage.open(img))
 
+            # Include age in character info if not already present
+            if str(character_age) not in character_info:
+                character_info = f"{character_age} year old {character_info}"
+
             # Build prompt using the character generation template
             template = self.env.get_template("character_generation.j2")
             prompt = template.render(
                 gender=character_gender,
                 character_info=character_info,
                 art_style=art_style,
-                reference_note=f"Based on the {len(image_inputs)} uploaded photos"
+                reference_note=f"Based on the {len(image_inputs)} uploaded photos of a {character_age} year old {character_gender}"
             )
 
-            # Prepare contents for generation
-            contents = [prompt] + image_inputs
-
-            # Add size requirements to prompt
+            # Add character age emphasis and size requirements to prompt
+            prompt += f"\n\nIMPORTANT: The character is {character_age} years old. Ensure the character's appearance, proportions, and features clearly reflect a {character_age}-year-old {character_gender}.\n"
             prompt += "\n\nIMAGE SIZE REQUIREMENTS:\n"
             prompt += "- Generate image in SQUARE format (1:1 aspect ratio)\n"
             prompt += "- Target dimensions: 800x800 pixels\n"
             prompt += "- Maintain consistent square size across all generated images\n"
+
+            # Prepare contents for generation
+            contents = [prompt] + image_inputs
 
             # Generate character reference with specific generation config
             from google.genai import types

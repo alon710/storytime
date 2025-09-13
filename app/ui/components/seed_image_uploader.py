@@ -30,7 +30,7 @@ class SeedImageUploader:
         reference_method = st.radio(
             "Choose how to provide character reference:",
             ["Upload Reference Image", "Generate from Photos"],
-            help="Either upload an existing character reference or generate one from photos"
+            help="Either upload an existing character reference or generate one from photos",
         )
 
         # Always show character parameters form
@@ -40,23 +40,29 @@ class SeedImageUploader:
         col1, col2 = st.columns(2)
 
         with col1:
-            character_name = st.text_input("Character Name", value="Hero", key="char_name")
-            character_age = st.number_input("Character Age", min_value=1, max_value=18, value=5, key="char_age")
+            character_name = st.text_input(
+                "Character Name", value="Hero", key="char_name"
+            )
+            character_age = st.number_input(
+                "Character Age", min_value=1, max_value=18, value=5, key="char_age"
+            )
 
         with col2:
-            character_gender = st.selectbox("Gender", ["boy", "girl"], key="char_gender")
+            character_gender = st.selectbox(
+                "Gender", ["boy", "girl"], key="char_gender"
+            )
             art_style = st.selectbox(
                 "Art Style",
                 options=[style.value for style in ArtStyle],
                 index=0,
-                key="art_style"
+                key="art_style",
             )
 
         system_prompt = st.text_area(
             "System Prompt (Optional)",
             placeholder="Additional character details, themes, mood, or specific requirements for the story",
             height=100,
-            key="system_prompt_seed"
+            key="system_prompt_seed",
         )
 
         st.divider()
@@ -67,7 +73,7 @@ class SeedImageUploader:
                 "Upload character reference image",
                 type=["png", "jpg", "jpeg"],
                 accept_multiple_files=False,
-                help="Upload a character reference image to use for story generation"
+                help="Upload a character reference image to use for story generation",
             )
 
             if uploaded_reference:
@@ -83,14 +89,18 @@ class SeedImageUploader:
                 "Upload character photos",
                 type=["png", "jpg", "jpeg"],
                 accept_multiple_files=True,
-                help="Upload photos to generate a character reference image"
+                help="Upload photos to generate a character reference image",
             )
 
             if uploaded_files:
                 st.write(f"**Uploaded {len(uploaded_files)} photo(s)**")
 
                 # Generate or regenerate button
-                button_text = "Regenerate Character Reference" if st.session_state.generated_character_ref else "Generate Character Reference"
+                button_text = (
+                    "Regenerate Character Reference"
+                    if st.session_state.generated_character_ref
+                    else "Generate Character Reference"
+                )
 
                 if st.button(button_text, type="primary", use_container_width=True):
                     with st.spinner("Generating character reference..."):
@@ -104,8 +114,10 @@ class SeedImageUploader:
                                 character_name=character_name,
                                 character_age=character_age,
                                 character_gender=character_gender,
-                                character_info=system_prompt if system_prompt else f"{character_age} year old {character_gender}",
-                                art_style=art_style
+                                character_info=system_prompt
+                                if system_prompt
+                                else f"{character_age} year old {character_gender}",
+                                art_style=art_style,
                             )
 
                             if image_path:
@@ -120,16 +132,20 @@ class SeedImageUploader:
                             st.error(f"Error generating character reference: {str(e)}")
 
             # Display generated character reference
-            if st.session_state.generated_character_ref and os.path.exists(st.session_state.generated_character_ref):
+            if st.session_state.generated_character_ref and os.path.exists(
+                st.session_state.generated_character_ref
+            ):
                 st.divider()
                 st.write("**Generated Character Reference:**")
-                st.image(st.session_state.generated_character_ref, use_container_width=True)
-                st.info("You can regenerate with different parameters or continue to the next step.")
+                st.image(st.session_state.generated_character_ref)
+                st.info(
+                    "You can regenerate with different parameters or continue to the next step."
+                )
 
         # Prepare metadata
         metadata = StoryMetadata(
             instructions=system_prompt if system_prompt else None,
-            art_style=ArtStyle(art_style)
+            art_style=ArtStyle(art_style),
         )
 
         # Determine which reference to use
@@ -144,16 +160,10 @@ class SeedImageUploader:
 
         # Return the reference image as seed
         if final_reference:
-            return {
-                "images": final_reference,
-                "metadata": metadata
-            }
+            return {"images": final_reference, "metadata": metadata}
 
         # Return just metadata if no reference yet but has system prompt
         if system_prompt:
-            return {
-                "images": [],
-                "metadata": metadata
-            }
+            return {"images": [], "metadata": metadata}
 
         return None

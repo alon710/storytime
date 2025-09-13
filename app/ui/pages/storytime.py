@@ -129,12 +129,19 @@ def render_generation_step() -> None:
             with st.spinner("Generating your story..."):
                 try:
                     processor = StoryProcessor()
+                    # Try to get from widget keys
+                    character_name = st.session_state.get("char_name", "Hero")
+                    character_age = st.session_state.get("char_age", 5)
+                    character_gender = st.session_state.get("char_gender", "child")
 
                     generated_pages = processor.generate_story(
                         story_template=st.session_state.edited_template,
                         seed_images=st.session_state.seed_images,
                         metadata=st.session_state.metadata,
                         system_prompt=system_prompt,
+                        character_name=character_name,
+                        character_age=character_age,
+                        character_gender=character_gender,
                     )
 
                     if generated_pages:
