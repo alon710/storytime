@@ -256,13 +256,16 @@ class PDFBuilder:
             c.drawString(line_x, start_y - (i * line_height), line)
 
     def _draw_fitted_image(self, c: canvas.Canvas, image_path: str, page_width: float, page_height: float):
-        """Draw image stretched to fill entire page - no black bars."""
+        """Draw image in top 4/5 of page, leaving bottom 1/5 for text."""
+        image_height = page_height * 4/5
+        image_y = page_height / 5  # Position image above text banner
+        
         c.drawImage(
             image=image_path,
             x=0,
-            y=0,
+            y=image_y,
             width=page_width,
-            height=page_height,
+            height=image_height,
             preserveAspectRatio=False,
             mask='auto'
         )
