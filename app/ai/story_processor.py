@@ -58,9 +58,15 @@ class StoryProcessor:
                 # Generate image
                 image_path = None
                 if seed_images or metadata:
+                    # Collect previous pages context
                     previous_pages = [
-                        {"title": p.title, "text": p.text}
+                        {"title": p.title, "text": p.text, "illustration_prompt": p.illustration_prompt}
                         for p in results
+                    ] if results else None
+
+                    # Collect previous generated images for visual consistency
+                    previous_images = [
+                        p.image_path for p in results if p.image_path
                     ] if results else None
 
                     image_path = self.image_generator.generate(
@@ -70,7 +76,8 @@ class StoryProcessor:
                         story_text=text,
                         metadata=metadata,
                         system_prompt=system_prompt,
-                        previous_pages=previous_pages
+                        previous_pages=previous_pages,
+                        previous_images=previous_images
                     )
 
                 # Create GeneratedPage

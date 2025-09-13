@@ -94,68 +94,90 @@ class ImageGenerator(BaseAIGenerator):
         metadata: Optional[StoryMetadata] = None,
         system_prompt: Optional[str] = None,
         previous_pages: Optional[List[dict]] = None,
+        previous_images: Optional[List[str]] = None,
     ) -> Optional[str]:
-        """Generate illustration for a story page.
+        """Generate illustration for a story page using image_generation.j2 template.
 
         Args:
             illustration_prompt: Prompt describing the illustration
             page_title: Title of the current page
             story_text: Text content of the page
-            seed_images: Optional seed images for visual reference
+            seed_images: Optional seed images for visual reference (character reference)
             metadata: Optional metadata with art style and instructions
             system_prompt: Optional system prompt for generation
             previous_pages: Previous pages for context
+            previous_images: Previous generated images for visual consistency
 
         Returns:
             Path to generated image file, or None on failure
         """
-        # Prepare image inputs
-        image_inputs = []
-        if seed_images:
-            for img in seed_images[:3]:  # Limit to 3 seed images
-                try:
-                    image_inputs.append(Image.open(img))
-                except Exception as e:
-                    logger.warning(f"Failed to open seed image: {e}")
-
-        # Build generation prompt
-        prompt_parts = []
-
-        # System instructions
-        prompt_parts.append("Generate a children's book illustration based on the following:")
-
-        if system_prompt:
-            prompt_parts.append(f"\nSystem Instructions: {system_prompt}")
-
-        if metadata:
-            if metadata.art_style:
-                prompt_parts.append(f"\nArt Style: {metadata.art_style.value}")
-            if metadata.instructions:
-                prompt_parts.append(f"\nSpecial Instructions: {metadata.instructions}")
-
-        # Page context
-        prompt_parts.append(f"\nPage Title: {page_title}")
-        prompt_parts.append(f"Story Text: {story_text}")
-        prompt_parts.append(f"\nIllustration Description: {illustration_prompt}")
-
-        # Previous pages context for consistency
-        if previous_pages and len(previous_pages) > 0:
-            prompt_parts.append("\nPrevious story context for continuity:")
-            for prev in previous_pages[-2:]:  # Last 2 pages for context
-                prompt_parts.append(f"- {prev.get('title', '')}: {prev.get('text', '')[:100]}...")
-
-        if seed_images:
-            prompt_parts.append(f"\nUsing {len(image_inputs)} seed image(s) as visual reference.")
-
-        prompt_parts.append("\nCreate a vibrant, child-friendly illustration that captures the scene described.")
-
-        full_prompt = "\n".join(prompt_parts)
-
-        # Prepare contents for generation
-        contents = [full_prompt] + image_inputs
-
-        # Generate image
         try:
+            # Prepare character reference images (seed images)
+            character_images = []
+            if seed_images:
+                for img in seed_images:
+                    try:
+                        if isinstance(img, str):
+                            character_images.append(Image.open(img))
+                        else:
+                            character_images.append(Image.open(img))
+                    except Exception as e:
+                        logger.warning(f"Failed to open seed image: {e}")
+
+            # Prepare previous images for context (up to 5)
+            context_images = []
+            if previous_images:
+                # Take up to 5 most recent images for context
+                recent_images = previous_images[-5:] if len(previous_images) > 5 else previous_images
+                for img_path in recent_images:
+                    try:
+                        context_images.append(Image.open(img_path))
+                    except Exception as e:
+                        logger.warning(f"Failed to open previous image: {e}")
+
+            # Extract character info from session state or defaults
+            # We can access this from streamlit session state if needed
+            character_name = "Hero"
+            character_age = 5
+            character_gender = "child"
+
+            # Try to extract from system prompt if available
+            if metadata and metadata.instructions:
+                # Simple extraction from instructions
+                instructions_lower = metadata.instructions.lower()
+                if "boy" in instructions_lower:
+                    character_gender = "boy"
+                elif "girl" in instructions_lower:
+                    character_gender = "girl"
+
+                # Try to extract age if mentioned
+                import re
+                age_match = re.search(r'(\d+)[\s-]?year', instructions_lower)
+                if age_match:
+                    character_age = int(age_match.group(1))
+
+            # Use the image_generation.j2 template
+            template = self.env.get_template("image_generation.j2")
+            prompt = template.render(
+                page_title=page_title,
+                character_name=character_name,
+                character_age=character_age,
+                character_gender=character_gender,
+                num_character_images=len(character_images),
+                illustration_prompt=illustration_prompt,
+                story_text=story_text,
+                previous_pages=previous_pages,
+                num_previous_images=len(context_images)
+            )
+
+            # Add any additional system instructions
+            if system_prompt:
+                prompt = f"{system_prompt}\n\n{prompt}"
+
+            # Prepare contents: prompt + character reference + previous images for context
+            contents = [prompt] + character_images + context_images
+
+            # Generate image
             response = self._generate_content(contents, ["Text", "Image"])
 
             if not response or not response.candidates:
