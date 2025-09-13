@@ -31,7 +31,6 @@ class StoryEditor:
             st.write(f"Total Pages: {len(generated_pages)}")
 
         updated_pages = []
-        pages_to_remove = []
 
         for i, page in enumerate(generated_pages):
             with st.container():
@@ -41,8 +40,12 @@ class StoryEditor:
                     st.write(f"**Page {page.page_number}: {page.title}**")
                 with header_col2:
                     if st.button("✕", key=f"remove_page_{i}", help="Remove this page"):
-                        pages_to_remove.append(i)
-                        continue
+                        # Remove this page and trigger rerun
+                        filtered_pages = [p for j, p in enumerate(generated_pages) if j != i]
+                        # Re-number pages
+                        for idx, p in enumerate(filtered_pages):
+                            p.page_number = idx + 1
+                        return filtered_pages
 
                 # Content columns
                 img_col, text_col = st.columns([1, 1])
@@ -73,14 +76,11 @@ class StoryEditor:
                         st.text(page.illustration_prompt)
 
                 st.divider()
-
-                # Add page to updated list if not marked for removal
-                if i not in pages_to_remove:
-                    updated_pages.append(page)
+                updated_pages.append(page)
 
         # Add new page button
         if st.button("Add New Page", use_container_width=True):
-            new_page_number = len(updated_pages) + 1
+            new_page_number = len(generated_pages) + 1
             new_page = GeneratedPage(
                 page_number=new_page_number,
                 title=f"New Page {new_page_number}",
@@ -88,11 +88,7 @@ class StoryEditor:
                 illustration_prompt="Describe the illustration for this page",
                 image_path=None
             )
-            updated_pages.append(new_page)
+            generated_pages.append(new_page)
             st.rerun()
-
-        # Re-number pages after any removals
-        for i, page in enumerate(updated_pages):
-            page.page_number = i + 1
 
         return updated_pages

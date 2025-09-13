@@ -32,11 +32,9 @@ class TemplateEditor:
         st.divider()
         st.write(f"**Pages ({len(template.pages)})**")
 
-        # Track pages to remove
-        pages_to_remove = []
+        # Edit each page
         updated_pages = []
 
-        # Edit each page
         for i, page in enumerate(template.pages):
             with st.container():
                 # Page header with remove button
@@ -47,8 +45,9 @@ class TemplateEditor:
                     if st.button(
                         "✕", key=f"remove_template_page_{i}", help="Remove this page"
                     ):
-                        pages_to_remove.append(i)
-                        continue
+                        # Skip this page and trigger rerun
+                        template.pages = [p for j, p in enumerate(template.pages) if j != i]
+                        st.rerun()
 
                 # Edit page fields
                 page.title = st.text_input(
@@ -75,22 +74,19 @@ class TemplateEditor:
                     )
 
                 st.divider()
-
-                # Add page to updated list if not marked for removal
-                if i not in pages_to_remove:
-                    updated_pages.append(page)
+                updated_pages.append(page)
 
         # Add new page button
         if st.button("Add New Page", key="add_template_page"):
             new_page = PageData(
-                title=f"Page {len(updated_pages) + 1}",
+                title=f"Page {len(template.pages) + 1}",
                 story_text="Enter story text here...",
                 illustration_prompt="Describe the illustration...",
             )
-            updated_pages.append(new_page)
+            template.pages.append(new_page)
             st.rerun()
 
-        # Update template with edited pages
+        # Update template with current pages
         template.pages = updated_pages
 
         return template
