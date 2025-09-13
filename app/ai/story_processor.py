@@ -122,7 +122,7 @@ class StoryProcessor:
                     int(progress), f"Generating image {i + 1}/{len(pages_data)}..."
                 )
 
-            previous_pages = pages_data[:i] if i > 0 else None
+            previous_pages = [page.model_dump() for page in pages_data[:i]] if i > 0 else None
             previous_images = image_paths[:i] if i > 0 else None
 
             logger.info(
