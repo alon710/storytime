@@ -88,8 +88,8 @@ class CharacterGenerator(BaseAIGenerator):
         art_style: str,
     ) -> str:
         reference_note = f"I have provided {num_images} reference photo(s)"
-        
-        template = self.env.get_template('character_generation.j2')
+
+        template = self.env.get_template("character_generation.j2")
         return template.render(
             gender=gender,
             character_info=character_info,
@@ -107,13 +107,11 @@ class CharacterGenerator(BaseAIGenerator):
     ):
         logger.debug(
             "Generating character reference poses",
-            extra={
-                "art_style": art_style,
-                "character_name": character_name,
-                "character_age": character_age,
-                "gender": gender,
-                "num_reference_images": num_images,
-            },
+            art_style=art_style,
+            character_name=character_name,
+            character_age=character_age,
+            gender=gender,
+            num_reference_images=num_images,
         )
 
     def _process_generation_response(
@@ -139,7 +137,7 @@ class CharacterGenerator(BaseAIGenerator):
 
         logger.warning(
             "No character image generated - text response only",
-            extra={"response_text": response_text[:200]},
+            response_text=response_text[:200],
         )
         return None
 
@@ -153,16 +151,14 @@ class CharacterGenerator(BaseAIGenerator):
     ):
         logger.info(
             "Successfully generated character reference poses",
-            extra={
-                "art_style": art_style,
-                "temp_path": temp_path,
-                "character_name": character_name,
-                "gender": gender,
-            },
+            art_style=art_style,
+            temp_path=temp_path,
+            character_name=character_name,
+            gender=gender,
         )
 
     def _log_response_text(self, response_text: str):
         logger.debug(
             "Gemini character generation response",
-            extra={"response_text": response_text[:200]},
+            response_text=response_text[:200],
         )

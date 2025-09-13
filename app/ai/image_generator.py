@@ -42,7 +42,7 @@ class ImageGenerator(BaseAIGenerator):
             page_title,
             story_text,
             previous_pages,
-            previous_images
+            previous_images,
         )
 
     def _generate_impl(
@@ -65,9 +65,7 @@ class ImageGenerator(BaseAIGenerator):
             character_image_pils.append(Image.open(char_img))
             char_img.seek(0)
 
-        context_info = (
-            f"\nStory context: {story_text}" if story_text.strip() else ""
-        )
+        context_info = f"\nStory context: {story_text}" if story_text.strip() else ""
 
         # Build previous pages context for visual consistency
         previous_context = ""
@@ -81,17 +79,13 @@ class ImageGenerator(BaseAIGenerator):
         if previous_images:
             # Limit to last 2-3 images to manage API request size
             recent_images = (
-                previous_images[-3:]
-                if len(previous_images) > 3
-                else previous_images
+                previous_images[-3:] if len(previous_images) > 3 else previous_images
             )
             logger.info(
                 "Including previous images for visual continuity",
-                extra={
-                    "page_title": page_title,
-                    "previous_image_count": len(recent_images),
-                    "total_previous_images": len(previous_images),
-                },
+                page_title=page_title,
+                previous_image_count=len(recent_images),
+                total_previous_images=len(previous_images),
             )
 
             for img_path in recent_images:
@@ -100,15 +94,15 @@ class ImageGenerator(BaseAIGenerator):
                     previous_image_pils.append(previous_img)
                     logger.debug(
                         "Successfully loaded previous image",
-                        extra={"image_path": img_path},
+                        image_path=img_path,
                     )
                 except Exception as e:
                     logger.warning(
                         "Failed to load previous image",
-                        extra={"image_path": img_path, "error": str(e)},
+                        image_path=img_path,
+                        error=str(e),
                     )
 
-        # Add context about character references and previous images
         character_context_note = f"Character reference: I have provided {len(character_image_pils)} reference photo(s) of {character_name}. Use all photos to capture the child's appearance, features, and characteristics accurately."
 
         image_context_note = ""
@@ -148,15 +142,13 @@ class ImageGenerator(BaseAIGenerator):
 
         logger.debug(
             "Sending generation request to Gemini",
-            extra={
-                "page_title": page_title,
-                "total_content_items": len(contents),
-                "character_images_count": len(character_image_pils),
-                "has_previous_images": len(previous_image_pils) > 0,
-                "previous_pages_count": len(previous_pages)
-                if previous_pages
-                else 0,
-            },
+            system_prompt=system_prompt,
+            illustration_prompt=illustration_prompt,
+            page_title=page_title,
+            total_content_items=len(contents),
+            character_images_count=len(character_image_pils),
+            has_previous_images=len(previous_image_pils) > 0,
+            previous_pages_count=len(previous_pages) if previous_pages else 0,
         )
         response = self._generate_content(contents, ["Text", "Image"])
         if response is None:
@@ -180,16 +172,18 @@ class ImageGenerator(BaseAIGenerator):
 
                 logger.info(
                     "Successfully generated image for page",
-                    extra={"page_title": page_title, "temp_path": temp_path},
+                    page_title=page_title,
+                    temp_path=temp_path,
                 )
                 logger.debug(
                     "Gemini response text",
-                    extra={"response_text": response_text[:200]},
+                    response_text=response_text[:200],
                 )
                 return temp_path
 
         logger.warning(
             "No image generated for page - text response only",
-            extra={"page_title": page_title, "response_text": response_text[:200]},
+            page_title=page_title,
+            response_text=response_text[:200],
         )
         return None

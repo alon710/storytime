@@ -169,17 +169,11 @@ class StoryProcessor:
 
             logger.info(
                 "Generating image with context",
-                extra={
-                    "page_number": i + 1,
-                    "total_pages": len(pages_data),
-                    "page_title": page_data["title"],
-                    "previous_pages_count": len(previous_pages)
-                    if previous_pages
-                    else 0,
-                    "previous_images_count": len(previous_images)
-                    if previous_images
-                    else 0,
-                },
+                page_number=i + 1,
+                total_pages=len(pages_data),
+                page_title=page_data["title"],
+                previous_pages_count=len(previous_pages) if previous_pages else 0,
+                previous_images_count=len(previous_images) if previous_images else 0,
             )
 
             image_path = self.generate_image_for_page(

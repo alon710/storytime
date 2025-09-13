@@ -13,27 +13,23 @@ class BaseAIGenerator(ABC):
     def __init__(self, client: genai.Client, model: str):
         self.client = client
         self.model = model
-        template_dir = Path(__file__).parent / 'templates'
+        template_dir = Path(__file__).parent / "templates"
         self.env = Environment(loader=FileSystemLoader(str(template_dir)))
 
     def _with_error_handling(self, operation_name: str, func, *args, **kwargs):
         try:
-            logger.debug(
-                "Starting ai operation",
-                extra={"operation": operation_name},
-            )
+            logger.debug("Starting ai operation", operation=operation_name)
 
             result = func(*args, **kwargs)
 
             if result is not None:
                 logger.info(
-                    "Operation was successfully completed",
-                    extra={"operation": operation_name},
+                    "Operation was successfully completed", operation=operation_name
                 )
             else:
                 logger.warning(
                     "Operation completed but returned no result",
-                    extra={"operation": operation_name},
+                    operation=operation_name,
                 )
 
             return result
@@ -50,7 +46,7 @@ class BaseAIGenerator(ABC):
             if hasattr(e, "response"):
                 error_details["response"] = str(e.response)
 
-            logger.error("AI operation failed", extra=error_details, exc_info=True)
+            logger.error("AI operation failed", error_details, exc_info=True)
             return None
 
     def _generate_content(

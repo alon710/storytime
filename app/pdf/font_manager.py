@@ -37,11 +37,9 @@ class FontManager:
 
         logger.info(
             "Font setup completed",
-            extra={
-                "title_font": fonts["title"],
-                "body_font": fonts["body"],
-                "accent_font": fonts["accent"],
-            },
+            title_font=fonts["title"],
+            body_font=fonts["body"],
+            accent_font=fonts["accent"],
         )
 
         return fonts
@@ -53,7 +51,7 @@ class FontManager:
             if font_name in self.registered_fonts:
                 return self.registered_fonts[font_name]
 
-            logger.info("Downloading font", extra={"font_name": font_name, "url": url})
+            logger.info("Downloading font", font_name=font_name, url=url)
 
             # Download font
             response = requests.get(url, timeout=10)
@@ -71,7 +69,8 @@ class FontManager:
 
                 logger.info(
                     "Successfully registered font",
-                    extra={"font_name": font_name, "path": font_path},
+                    font_name=font_name,
+                    font_path=font_path,
                 )
 
                 return font_name
@@ -79,7 +78,8 @@ class FontManager:
             except Exception as reg_error:
                 logger.warning(
                     "Failed to register font, using fallback",
-                    extra={"font_name": font_name, "error": str(reg_error)},
+                    font_name=font_name,
+                    error=str(reg_error),
                 )
 
                 return None
@@ -87,7 +87,8 @@ class FontManager:
         except Exception as e:
             logger.warning(
                 "Font download failed, using system fallback",
-                extra={"font_name": font_name, "error": str(e)},
+                font_name=font_name,
+                error=str(e),
             )
             return None
 

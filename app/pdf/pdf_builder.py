@@ -29,11 +29,9 @@ class PDFBuilder:
 
         logger.info(
             "Starting PDF creation with child-friendly styling",
-            extra={
-                "book_title": book_title,
-                "total_pages": len(pages_data),
-                "fonts_available": self.fonts,
-            },
+            book_title=book_title,
+            total_pages=len(pages_data),
+            fonts_available=self.fonts,
         )
 
         # Title page
@@ -60,7 +58,10 @@ class PDFBuilder:
             )
 
         c.save()
-        logger.info("PDF creation completed", extra={"pdf_path": pdf_path})
+        logger.info(
+            "PDF creation completed",
+            pdf_path=pdf_path,
+        )
         return pdf_path
 
     def _create_title_page(
@@ -137,7 +138,8 @@ class PDFBuilder:
             except Exception as e:
                 logger.warning(
                     "Failed to draw story image",
-                    extra={"image_path": image_path, "error": str(e)},
+                    image_path=image_path,
+                    error=str(e),
                 )
                 self._draw_image_placeholder(c, width, height, colors["accent"])
         else:

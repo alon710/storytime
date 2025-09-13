@@ -32,9 +32,13 @@ class TextPersonalizer(BaseAIGenerator):
             character_name,
             character_age,
             character_gender,
-            previous_pages
+            previous_pages,
         )
-        return result if result is not None else self._simple_replacement(text, character_name)
+        return (
+            result
+            if result is not None
+            else self._simple_replacement(text, character_name)
+        )
 
     def _personalize_impl(
         self,
@@ -53,11 +57,9 @@ class TextPersonalizer(BaseAIGenerator):
 
             logger.info(
                 "Including previous pages for text personalization continuity",
-                extra={
-                    "previous_pages_count": len(previous_pages),
-                    "context_pages_used": min(3, len(previous_pages)),
-                    "total_context_length": len(context_info),
-                },
+                previous_pages_count=len(previous_pages),
+                context_pages_used=min(3, len(previous_pages)),
+                total_context_length=len(context_info),
             )
 
         personalization_prompt = f"""
@@ -81,27 +83,23 @@ class TextPersonalizer(BaseAIGenerator):
         response = self._generate_content([personalization_prompt])
         if response is None:
             return self._simple_replacement(text, character_name)
-            
+
         personalized_text = self._extract_text_response(response)
         if personalized_text:
             logger.info(
                 "Successfully personalized story text",
-                extra={
-                    "original_length": len(text),
-                    "personalized_length": len(personalized_text),
-                    "had_previous_context": previous_pages is not None,
-                    "character_name": character_name,
-                    "character_age": character_age,
-                },
+                original_length=len(text),
+                personalized_length=len(personalized_text),
+                had_previous_context=previous_pages is not None,
+                character_name=character_name,
+                character_age=character_age,
             )
             return personalized_text
         else:
             logger.warning(
                 "AI personalization failed, falling back to simple name replacement",
-                extra={
-                    "character_name": character_name,
-                    "had_previous_context": previous_pages is not None,
-                },
+                character_name=character_name,
+                had_previous_context=previous_pages is not None,
             )
             return self._simple_replacement(text, character_name)
 

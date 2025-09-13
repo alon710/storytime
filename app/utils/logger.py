@@ -1,28 +1,42 @@
 import logging
 import sys
+import structlog
 
 
 def setup_logger(
     name: str = "storytime",
     level: str = "INFO",
-) -> logging.Logger:
-    logger = logging.getLogger(name)
+) -> structlog.stdlib.BoundLogger:
+    # Configure structlog
+    structlog.configure(
+        processors=[
+            structlog.stdlib.filter_by_level,
+            structlog.stdlib.add_logger_name,
+            structlog.stdlib.add_log_level,
+            structlog.stdlib.PositionalArgumentsFormatter(),
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+            structlog.processors.UnicodeDecoder(),
+            structlog.dev.ConsoleRenderer(colors=True),
+        ],
+        context_class=dict,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True,
+    )
 
-    if logger.handlers:
-        return logger
+    # Set up standard library logger
+    logging.basicConfig(
+        format="%(message)s",
+        stream=sys.stdout,
+        level=getattr(logging, level.upper(), logging.INFO),
+    )
 
-    numeric_level = getattr(logging, level.upper(), logging.INFO)
-    logger.setLevel(numeric_level)
-
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(numeric_level)
-
-    logger.addHandler(console_handler)
-
-    return logger
+    return structlog.get_logger(name)
 
 
-def get_logger_with_config() -> logging.Logger:
+def get_logger_with_config() -> structlog.stdlib.BoundLogger:
     try:
         from app.utils.settings import settings
 
