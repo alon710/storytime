@@ -57,8 +57,23 @@ class ImageGenerator(BaseAIGenerator):
             # Prepare contents for generation
             contents = [prompt] + image_inputs
 
-            # Generate character reference
-            response = self._generate_content(contents, ["Text", "Image"])
+            # Add size requirements to prompt
+            prompt += "\n\nIMAGE SIZE REQUIREMENTS:\n"
+            prompt += "- Generate image in SQUARE format (1:1 aspect ratio)\n"
+            prompt += "- Target dimensions: 800x800 pixels\n"
+            prompt += "- Maintain consistent square size across all generated images\n"
+
+            # Generate character reference with specific generation config
+            from google.genai import types
+            generation_config = types.GenerateContentConfig(
+                temperature=0.4,
+                top_p=1,
+                top_k=32,
+                max_output_tokens=8192,
+                response_modalities=["Text", "Image"]
+            )
+
+            response = self._generate_content(contents, config=generation_config)
 
             if not response or not response.candidates:
                 logger.warning("No response from AI for character reference generation")
@@ -70,12 +85,26 @@ class ImageGenerator(BaseAIGenerator):
                     image_data = part.inline_data.data
                     generated_image = PILImage.open(io.BytesIO(image_data))
 
+                    # Resize to consistent square dimensions
+                    target_size = 800
+
+                    # Resize image to consistent size while maintaining aspect ratio
+                    generated_image.thumbnail((target_size, target_size), PILImage.Resampling.LANCZOS)
+
+                    # Create new square image with exact dimensions and paste resized image
+                    final_image = PILImage.new('RGB', (target_size, target_size), (255, 255, 255))
+
+                    # Center the resized image
+                    x = (target_size - generated_image.width) // 2
+                    y = (target_size - generated_image.height) // 2
+                    final_image.paste(generated_image, (x, y))
+
                     # Save to temporary file
                     if temp_path := save_image_to_temp(
-                        image=generated_image,
+                        image=final_image,
                         suffix=Suffix.png,
                     ):
-                        logger.info(f"Successfully generated character reference for {character_name}")
+                        logger.info(f"Successfully generated character reference for {character_name} (size: {target_size}x{target_size})")
                         return temp_path
 
             logger.warning("No image found in AI response")
@@ -177,8 +206,17 @@ class ImageGenerator(BaseAIGenerator):
             # Prepare contents: prompt + character reference + previous images for context
             contents = [prompt] + character_images + context_images
 
-            # Generate image
-            response = self._generate_content(contents, ["Text", "Image"])
+            # Generate image with specific generation config for consistency
+            from google.genai import types
+            generation_config = types.GenerateContentConfig(
+                temperature=0.4,
+                top_p=1,
+                top_k=32,
+                max_output_tokens=8192,
+                response_modalities=["Text", "Image"]
+            )
+
+            response = self._generate_content(contents, config=generation_config)
 
             if not response or not response.candidates:
                 logger.warning("No response from AI for image generation")
@@ -190,12 +228,26 @@ class ImageGenerator(BaseAIGenerator):
                     image_data = part.inline_data.data
                     generated_image = Image.open(io.BytesIO(image_data))
 
+                    # Resize to consistent square dimensions
+                    target_size = 800
+
+                    # Resize image to consistent size while maintaining aspect ratio
+                    generated_image.thumbnail((target_size, target_size), Image.Resampling.LANCZOS)
+
+                    # Create new square image with exact dimensions and paste resized image
+                    final_image = Image.new('RGB', (target_size, target_size), (255, 255, 255))
+
+                    # Center the resized image
+                    x = (target_size - generated_image.width) // 2
+                    y = (target_size - generated_image.height) // 2
+                    final_image.paste(generated_image, (x, y))
+
                     # Save to temporary file
                     if temp_path := save_image_to_temp(
-                        image=generated_image,
+                        image=final_image,
                         suffix=Suffix.png,
                     ):
-                        logger.info(f"Successfully generated image for page: {page_title}")
+                        logger.info(f"Successfully generated image for page: {page_title} (size: {target_size}x{target_size})")
                         return temp_path
 
             logger.warning("No image found in AI response")
