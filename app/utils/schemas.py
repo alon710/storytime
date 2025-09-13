@@ -11,17 +11,10 @@ class ArtStyle(str, Enum):
     pixar = "pixar"
 
 
-class Gender(str, Enum):
-    boy = "boy"
-    girl = "girl"
-
-
 class Suffix(str, Enum):
     png = ".png"
     jpg = ".jpg"
     jpeg = ".jpeg"
-    ttf = ".ttf"
-    pdf = ".pdf"
 
 
 class PageData(BaseModel):
@@ -30,26 +23,28 @@ class PageData(BaseModel):
     illustration_prompt: str
 
 
-class PersonalizedPage(BaseModel):
-    page_number: int
-    title: str
-    personalized_text: str
+class StoryMetadata(BaseModel):
+    """Metadata for story generation."""
+    title: Optional[str] = None
+    description: Optional[str] = None
+    instructions: Optional[str] = None  # Free-text instructions for AI
+    art_style: Optional[ArtStyle] = ArtStyle.watercolor
+    additional_context: Optional[str] = None
 
 
-class PersonalizedStoryBook(BaseModel):
-    personalized_pages: list[PersonalizedPage]
+class StoryTemplate(BaseModel):
+    """Story template structure."""
+    name: str
+    description: str
+    default_title: str
+    pages: list[PageData]
 
 
 class GeneratedPage(BaseModel):
-    page_data: PageData
-    personalized_text: str
-    image_path: Optional[str]
+    """Generated page with content and image."""
+    page_number: int
+    title: str
+    text: str
     edited_text: Optional[str] = None
-
-
-class Colors(str, Enum):
-    PRIMARY = "#2C3E50"  # Soft charcoal for main text
-    SECONDARY = "#E79771F5"  # Soft peach for text backgrounds
-    ACCENT = "#E8BBCA"  # Playful pink for page numbers
-    OVERLAY = "#00000066"  # 40% black for text background overlays
-    TEXT_LIGHT = "#FFFFFF"  # White for text on dark backgrounds
+    image_path: Optional[str] = None
+    illustration_prompt: str
