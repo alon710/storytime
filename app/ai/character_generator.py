@@ -44,11 +44,18 @@ class CharacterGenerator(BaseAIGenerator):
             character_name, character_age, gender
         )
         system_prompt = self._build_system_prompt(
-            gender, character_info, len(character_image_pils), art_style
+            gender=gender,
+            character_info=character_info,
+            num_images=len(character_image_pils),
+            art_style=art_style,
         )
 
         self._log_generation_start(
-            art_style, character_name, character_age, gender, len(character_image_pils)
+            art_style=art_style,
+            character_name=character_name,
+            character_age=character_age,
+            gender=gender,
+            num_images=len(character_image_pils),
         )
 
         contents = [system_prompt] + character_image_pils

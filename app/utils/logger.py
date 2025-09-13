@@ -7,7 +7,6 @@ def setup_logger(
     name: str = "storytime",
     level: str = "INFO",
 ) -> structlog.stdlib.BoundLogger:
-    # Configure structlog
     structlog.configure(
         processors=[
             structlog.stdlib.filter_by_level,
