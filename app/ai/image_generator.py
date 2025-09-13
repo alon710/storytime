@@ -16,6 +16,75 @@ class ImageGenerator(BaseAIGenerator):
     def __init__(self, client: genai.Client, model: str):
         super().__init__(client, model)
 
+    def generate_character_reference(
+        self,
+        character_images,
+        character_name: str,
+        character_age: int,
+        character_gender: str,
+        character_info: str,
+        art_style: str
+    ) -> Optional[str]:
+        """Generate character reference sheet from uploaded photos.
+
+        Args:
+            character_images: Uploaded character photos
+            character_name: Name of the character
+            character_age: Age of the character
+            character_gender: Gender (boy/girl)
+            character_info: Description of the character
+            art_style: Art style to apply
+
+        Returns:
+            Path to generated character reference image, or None on failure
+        """
+        try:
+            # Prepare images
+            from PIL import Image as PILImage
+            image_inputs = []
+            for img in character_images:
+                image_inputs.append(PILImage.open(img))
+
+            # Build prompt using the character generation template
+            template = self.env.get_template("character_generation.j2")
+            prompt = template.render(
+                gender=character_gender,
+                character_info=character_info,
+                art_style=art_style,
+                reference_note=f"Based on the {len(image_inputs)} uploaded photos"
+            )
+
+            # Prepare contents for generation
+            contents = [prompt] + image_inputs
+
+            # Generate character reference
+            response = self._generate_content(contents, ["Text", "Image"])
+
+            if not response or not response.candidates:
+                logger.warning("No response from AI for character reference generation")
+                return None
+
+            # Extract generated image
+            for part in response.candidates[0].content.parts:
+                if part.inline_data is not None:
+                    image_data = part.inline_data.data
+                    generated_image = PILImage.open(io.BytesIO(image_data))
+
+                    # Save to temporary file
+                    if temp_path := save_image_to_temp(
+                        image=generated_image,
+                        suffix=Suffix.png,
+                    ):
+                        logger.info(f"Successfully generated character reference for {character_name}")
+                        return temp_path
+
+            logger.warning("No image found in AI response")
+            return None
+
+        except Exception as e:
+            logger.error(f"Failed to generate character reference: {str(e)}")
+            return None
+
     def generate(
         self,
         illustration_prompt: str,

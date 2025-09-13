@@ -41,7 +41,9 @@ class StoryEditor:
                 with header_col2:
                     if st.button("✕", key=f"remove_page_{i}", help="Remove this page"):
                         # Remove this page and trigger rerun
-                        filtered_pages = [p for j, p in enumerate(generated_pages) if j != i]
+                        filtered_pages = [
+                            p for j, p in enumerate(generated_pages) if j != i
+                        ]
                         # Re-number pages
                         for idx, p in enumerate(filtered_pages):
                             p.page_number = idx + 1
@@ -64,7 +66,7 @@ class StoryEditor:
                         value=current_text,
                         height=200,
                         key=f"text_edit_{i}",
-                        label_visibility="collapsed"
+                        label_visibility="collapsed",
                     )
 
                     # Update edited text if changed
@@ -72,8 +74,8 @@ class StoryEditor:
                         page.edited_text = edited_text
 
                     # Show illustration prompt
-                    with st.expander("Illustration Prompt"):
-                        st.text(page.illustration_prompt)
+                with st.expander("Illustration Prompt"):
+                    st.text(page.illustration_prompt)
 
                 st.divider()
                 updated_pages.append(page)
@@ -86,7 +88,7 @@ class StoryEditor:
                 title=f"New Page {new_page_number}",
                 text="Enter your story text here...",
                 illustration_prompt="Describe the illustration for this page",
-                image_path=None
+                image_path=None,
             )
             generated_pages.append(new_page)
             st.rerun()

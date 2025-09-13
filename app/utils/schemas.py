@@ -7,6 +7,7 @@ class ArtStyle(str, Enum):
     watercolor = "watercolor"
     cartoon = "cartoon"
     ghibli = "ghibli"
+    vintage = "vintage"
     digital = "digital"
     pixar = "pixar"
 
@@ -25,6 +26,7 @@ class PageData(BaseModel):
 
 class StoryMetadata(BaseModel):
     """Metadata for story generation."""
+
     title: Optional[str] = None
     description: Optional[str] = None
     instructions: Optional[str] = None  # Free-text instructions for AI
@@ -34,6 +36,7 @@ class StoryMetadata(BaseModel):
 
 class StoryTemplate(BaseModel):
     """Story template structure."""
+
     name: str
     description: str
     default_title: str
@@ -42,6 +45,7 @@ class StoryTemplate(BaseModel):
 
 class GeneratedPage(BaseModel):
     """Generated page with content and image."""
+
     page_number: int
     title: str
     text: str
