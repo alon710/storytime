@@ -2,7 +2,7 @@
 
 Single-page workflow for generating AI-powered storybooks:
 1. Optional seed image upload with metadata
-2. Load story template
+2. Load and edit story template
 3. Generate and edit story content
 """
 
@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 
 from app.ui.components.seed_image_uploader import SeedImageUploader
+from app.ui.components.template_editor import TemplateEditor
 from app.ui.components.story_editor import StoryEditor
 from app.ai.story_processor import StoryProcessor
 from app.utils.schemas import StoryTemplate
@@ -26,6 +27,9 @@ def initialize_session_state() -> None:
 
     if "story_template" not in st.session_state:
         st.session_state.story_template = None
+
+    if "edited_template" not in st.session_state:
+        st.session_state.edited_template = None
 
     if "generated_pages" not in st.session_state:
         st.session_state.generated_pages = []
@@ -48,7 +52,7 @@ def load_story_templates() -> dict[str, StoryTemplate]:
                         name=data.get("name", template_file.stem),
                         description=data.get("description", ""),
                         default_title=data.get("default_title", "Story"),
-                        pages=data.get("pages", [])
+                        pages=data.get("pages", []),
                     )
             except Exception as e:
                 st.error(f"Error loading {template_file.name}: {str(e)}")
@@ -68,9 +72,9 @@ def render_seed_images_step() -> None:
         st.session_state.metadata = seed_data.get("metadata")
 
 
-def render_story_selection_step() -> None:
-    """Render Step 2: Story template selection."""
-    st.header("Step 2: Load Story Template")
+def render_story_template_step() -> None:
+    """Render Step 2: Load and edit story template."""
+    st.header("Step 2: Load and Edit Story Template")
 
     templates = load_story_templates()
 
@@ -78,53 +82,59 @@ def render_story_selection_step() -> None:
         st.error("No story templates found in app/story_templates/")
         return
 
+    # Template selection
     template_names = list(templates.keys())
     selected_template_name = st.selectbox(
         "Select a story template",
         template_names,
-        help="Choose a pre-defined story structure"
+        help="Choose a pre-defined story structure to edit",
     )
 
     if selected_template_name:
-        template = templates[selected_template_name]
-        st.session_state.story_template = template
+        # Load template if not already loaded or if selection changed
+        if (
+            not st.session_state.story_template
+            or st.session_state.story_template.name
+            != templates[selected_template_name].name
+        ):
+            st.session_state.story_template = templates[selected_template_name]
+            st.session_state.edited_template = templates[selected_template_name]
 
-        with st.expander("Template Details", expanded=False):
-            st.write(f"**Title:** {template.default_title}")
-            st.write(f"**Description:** {template.description}")
-            st.write(f"**Pages:** {len(template.pages)}")
+        # Show template editor
+        st.divider()
+        edited_template = TemplateEditor.render(st.session_state.edited_template)
+        st.session_state.edited_template = edited_template
 
 
 def render_generation_step() -> None:
     """Render Step 3: Story generation and editing."""
     st.header("Step 3: Generate and Edit Story")
 
-    if not st.session_state.story_template:
-        st.warning("Please select a story template first.")
+    if not st.session_state.edited_template:
+        st.warning("Please select and edit a story template first.")
         return
 
-    col1, col2 = st.columns(2)
+    (col1,) = st.columns(1)
 
     with col1:
         system_prompt = st.text_area(
             "System Prompt (Optional)",
             value=st.session_state.system_prompt,
             height=100,
-            help="Additional instructions for the AI generation process"
+            help="Additional instructions for the AI generation process",
         )
         st.session_state.system_prompt = system_prompt
 
-    with col2:
         if st.button("Generate Story", type="primary", use_container_width=True):
             with st.spinner("Generating your story..."):
                 try:
                     processor = StoryProcessor()
 
                     generated_pages = processor.generate_story(
-                        story_template=st.session_state.story_template,
+                        story_template=st.session_state.edited_template,
                         seed_images=st.session_state.seed_images,
                         metadata=st.session_state.metadata,
-                        system_prompt=system_prompt
+                        system_prompt=system_prompt,
                     )
 
                     if generated_pages:
@@ -155,7 +165,7 @@ def main() -> None:
 
     st.divider()
 
-    render_story_selection_step()
+    render_story_template_step()
 
     st.divider()
 
