@@ -46,7 +46,9 @@ class TemplateEditor:
                         "✕", key=f"remove_template_page_{i}", help="Remove this page"
                     ):
                         # Skip this page and trigger rerun
-                        template.pages = [p for j, p in enumerate(template.pages) if j != i]
+                        template.pages = [
+                            p for j, p in enumerate(template.pages) if j != i
+                        ]
                         st.rerun()
 
                 # Edit page fields
@@ -73,7 +75,6 @@ class TemplateEditor:
                         help="Description of the illustration to generate",
                     )
 
-                st.divider()
                 updated_pages.append(page)
 
         # Add new page button

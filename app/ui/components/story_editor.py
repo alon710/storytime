@@ -74,10 +74,11 @@ class StoryEditor:
                         page.edited_text = edited_text
 
                     # Show illustration prompt
-                with st.expander("Illustration Prompt"):
+                with st.expander("Page Details"):
+                    st.markdown(page.title)
                     st.text(page.illustration_prompt)
+                    st.text(page.text)
 
-                st.divider()
                 updated_pages.append(page)
 
         # Add new page button

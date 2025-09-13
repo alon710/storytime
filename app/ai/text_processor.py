@@ -50,12 +50,27 @@ class TextProcessor(BaseAIGenerator):
         try:
             # Use the text_personalization.j2 template for batch processing
             template = self.env.get_template("text_personalization.j2")
+
+            # Add page indices and total count for better context
+            pages_with_context = []
+            for idx, page in enumerate(pages):
+                page_dict = {
+                    "title": page.title,
+                    "story_text": page.story_text,
+                    "illustration_prompt": page.illustration_prompt,
+                    "page_index": idx + 1,
+                    "total_pages": len(pages),
+                    "is_first": idx == 0,
+                    "is_last": idx == len(pages) - 1
+                }
+                pages_with_context.append(page_dict)
+
             prompt = template.render(
                 character_name=character_name or "Hero",
                 character_age=character_age or 5,
                 character_gender=character_gender or "child",
                 is_batch_processing=True,
-                pages_data=pages,
+                pages_data=pages_with_context,
             )
 
             # Add any additional system instructions
