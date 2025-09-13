@@ -10,46 +10,17 @@ from app.ai.character_image_generator import CharacterImageGenerator
 from app.ai.text_personalizer import TextPersonalizer
 from app.pdf.pdf_builder import PDFBuilder
 
+from app.utils.logger import logger
+
 
 class StoryProcessor:
-    """Orchestrates the generation of illustrated children's books."""
-
     def __init__(self):
-        """Initialize processor with specialized components."""
-        os.environ["GEMINI_API_KEY"] = settings.google_api_key
         client = genai.Client(api_key=settings.google_api_key)
         model = settings.model
 
         self.image_generator = CharacterImageGenerator(client, model)
         self.text_personalizer = TextPersonalizer(client, model)
         self.pdf_builder = PDFBuilder(self.text_personalizer)
-
-    def generate_image_for_page(
-        self,
-        character_images,
-        character_name: str,
-        character_age: int,
-        character_gender: Gender,
-        illustration_prompt: str,
-        book_title: str,
-        page_title: str,
-        story_text: str = "",
-        previous_pages: list[dict] | None = None,
-        previous_images: list[str] | None = None,
-    ):
-        """Generate illustration using image generator module."""
-        return self.image_generator.generate(
-            character_images,
-            character_name,
-            character_age,
-            character_gender,
-            illustration_prompt,
-            book_title,
-            page_title,
-            story_text,
-            previous_pages,
-            previous_images,
-        )
 
     def create_pdf_booklet(
         self,
@@ -61,7 +32,6 @@ class StoryProcessor:
         image_paths,
         output_path: str,
     ) -> str:
-        """Create illustrated PDF booklet using PDF builder module."""
         return self.pdf_builder.create_booklet(
             book_title,
             character_name,
@@ -83,7 +53,6 @@ class StoryProcessor:
         output_folder: str,
         progress_bar=None,
     ) -> dict:
-        """Orchestrate complete illustrated storybook generation."""
         results = {
             "success": False,
             "pdf_path": None,
@@ -150,7 +119,6 @@ class StoryProcessor:
         book_title,
         progress_bar,
     ):
-        """Generate images for all pages."""
         if progress_bar:
             progress_bar.progress(30, "Generating illustrations...")
 
@@ -162,11 +130,8 @@ class StoryProcessor:
                     int(progress), f"Generating image {i + 1}/{len(pages_data)}..."
                 )
 
-            # Pass previous pages and images as context for continuity
             previous_pages = pages_data[:i] if i > 0 else None
             previous_images = image_paths[:i] if i > 0 else None
-
-            from app.utils.logger import logger
 
             logger.info(
                 "Generating image with context",
@@ -177,7 +142,7 @@ class StoryProcessor:
                 previous_images_count=len(previous_images) if previous_images else 0,
             )
 
-            image_path = self.generate_image_for_page(
+            image_path = self.image_generator.generate(
                 character_images,
                 character_name,
                 character_age,
