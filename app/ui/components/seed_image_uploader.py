@@ -79,7 +79,7 @@ class SeedImageUploader:
             if uploaded_reference:
                 st.session_state.uploaded_reference = uploaded_reference
                 st.write("**Uploaded Reference Image:**")
-                st.image(uploaded_reference, use_container_width=True)
+                st.image(uploaded_reference, width="stretch")
 
                 # Clear generated reference if user uploads their own
                 st.session_state.generated_character_ref = None
@@ -102,7 +102,7 @@ class SeedImageUploader:
                     else "Generate Character Reference"
                 )
 
-                if st.button(button_text, type="primary", use_container_width=True):
+                if st.button(button_text, type="primary", width="stretch"):
                     with st.spinner("Generating character reference..."):
                         try:
                             client = genai.Client(api_key=settings.google_api_key)

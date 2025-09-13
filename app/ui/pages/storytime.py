@@ -125,7 +125,7 @@ def render_generation_step() -> None:
         )
         st.session_state.system_prompt = system_prompt
 
-        if st.button("Generate Story", type="primary", use_container_width=True):
+        if st.button("Generate Story", type="primary", width="stretch"):
             with st.spinner("Generating your story..."):
                 try:
                     processor = StoryProcessor()
@@ -159,7 +159,7 @@ def render_generation_step() -> None:
         updated_pages = StoryEditor.render(st.session_state.generated_pages)
         st.session_state.generated_pages = updated_pages
 
-        if st.button("Regenerate Story", use_container_width=True):
+        if st.button("Regenerate Story", width="stretch"):
             st.session_state.generated_pages = []
             st.rerun()
 
