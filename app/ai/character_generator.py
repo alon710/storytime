@@ -50,23 +50,10 @@ class CharacterGenerator(BaseAIGenerator):
             art_style=art_style,
         )
 
-        self._log_generation_start(
-            art_style=art_style,
-            character_name=character_name,
-            character_age=character_age,
-            gender=gender,
-            num_images=len(character_image_pils),
-        )
-
         contents = [system_prompt] + character_image_pils
         response = self._generate_content(contents, ["Text", "Image"])
 
-        if response is None:
-            return None
-
-        return self._process_generation_response(
-            response, art_style, character_name, gender
-        )
+        return self._process_generation_response(response)
 
     def _prepare_character_images(self, character_images):
         character_image_pils = []
@@ -105,32 +92,15 @@ class CharacterGenerator(BaseAIGenerator):
             art_style=art_style.lower(),
         )
 
-    def _log_generation_start(
-        self,
-        art_style: str,
-        character_name: str,
-        character_age: int,
-        gender: Gender,
-        num_images: int,
-    ):
-        logger.debug(
-            "Generating character reference poses",
-            art_style=art_style,
-            character_name=character_name,
-            character_age=character_age,
-            gender=gender,
-            num_reference_images=num_images,
-        )
-
     def _process_generation_response(
         self,
         response,
-        art_style: str,
-        character_name: str,
-        gender: Gender,
     ) -> Optional[str]:
         generated_image = None
         response_text = ""
+        if not response:
+            logger.error("No response from character image generation")
+            return None
 
         for part in response.candidates[0].content.parts:
             if part.text is not None:

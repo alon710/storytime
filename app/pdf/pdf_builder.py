@@ -11,14 +11,13 @@ import io
 class PDFBuilder:
     def __init__(self, text_personalizer: TextPersonalizer):
         self.text_personalizer = text_personalizer
-        self.font = "Helvetica"
         self.page_width, self.page_height = A4
         self.image_height = self.page_height * 4 / 5
         self.text_area_height = self.page_height / 5
-        self.title_font_size = 24
         self.body_font_size = 16
         self.banner_height = self.page_height / 5
         self.padding = 10
+        self.line_height = 18
 
     def create_book(
         self,
@@ -77,34 +76,7 @@ class PDFBuilder:
 
             self._draw_text_banner(c=c, text=personalized_text)
 
-    def _draw_wrapped_text(
-        self,
-        c: canvas.Canvas,
-        text: str,
-        x: float,
-        y: float,
-        max_width: float,
-        line_height: float,
-    ):
-        """Draw text with simple word wrapping (legacy method for compatibility)."""
-        words = text.split()
-        lines = []
-        current_line = ""
-
-        for word in words:
-            test_line = current_line + " " + word if current_line else word
-            if c.stringWidth(test_line, "Helvetica", 12) <= max_width:
-                current_line = test_line
-            else:
-                if current_line:
-                    lines.append(current_line)
-                current_line = word
-
-        if current_line:
-            lines.append(current_line)
-
-        for i, line in enumerate(lines):
-            c.drawString(x, y - (i * line_height), line)
+        c.showPage()
 
     def _draw_text_banner(
         self,
@@ -113,41 +85,16 @@ class PDFBuilder:
     ):
         c.setFillColor(reportlab_colors.HexColor(Colors.SECONDARY))
         c.rect(
-            x=0, y=0, width=self.page_width, height=self.banner_height, stroke=0, fill=1
+            x=0,
+            y=0,
+            width=self.page_width,
+            height=self.banner_height,
+            stroke=0,
+            fill=1,
         )
 
         c.setFillColor(reportlab_colors.HexColor(Colors.PRIMARY))
-        font_size = 16
-        line_height = 20
-
-        text_x = self.padding
-        text_y = 0 + self.padding
-        text_width = self.page_width - (2 * self.padding)
-        text_height = self.banner_height - (2 * self.padding)
-
-        self._draw_wrapped_text_with_font(
-            c=c,
-            text=text,
-            x=text_x,
-            y=text_y + text_height - line_height,
-            max_width=text_width,
-            max_height=text_height,
-            font_size=font_size,
-            line_height=line_height,
-        )
-
-    def _draw_wrapped_text_with_font(
-        self,
-        c: canvas.Canvas,
-        text: str,
-        x: float,
-        y: float,
-        max_width: float,
-        max_height: float,
-        font_size: int,
-        line_height: float,
-    ):
-        c.setFont(self.font, font_size)
+        c.setFont("Helvetica", self.body_font_size)
 
         words = text.split()
         lines = []
@@ -155,7 +102,9 @@ class PDFBuilder:
 
         for word in words:
             test_line = current_line + " " + word if current_line else word
-            if c.stringWidth(test_line, self.font, font_size) <= max_width:
+            if c.stringWidth(
+                test_line, "Helvetica", self.body_font_size
+            ) <= self.page_width - (2 * self.padding):
                 current_line = test_line
             else:
                 if current_line:
@@ -165,19 +114,14 @@ class PDFBuilder:
         if current_line:
             lines.append(current_line)
 
-        max_lines = int(max_height / line_height)
-        if len(lines) > max_lines:
-            lines = lines[: max_lines - 1]
-            if lines:
-                lines[-1] += "..."
-
-        total_text_height = len(lines) * line_height
-        start_y = y - (total_text_height - line_height) / 2
+        total_text_height = len(lines) * self.line_height
+        text_area_height = self.banner_height - (2 * self.padding)
+        start_y = self.padding + (text_area_height + total_text_height) / 2
 
         for i, line in enumerate(lines):
-            line_width = c.stringWidth(line, self.font, font_size)
-            line_x = x + (max_width - line_width) / 2
-            c.drawString(line_x, start_y - (i * line_height), line)
+            line_width = c.stringWidth(line, "Helvetica", self.body_font_size)
+            line_x = (self.page_width - line_width) / 2
+            c.drawString(line_x, start_y - (i * self.line_height), line)
 
     def _draw_fitted_image(
         self,
@@ -187,7 +131,8 @@ class PDFBuilder:
         c.drawImage(
             image=image_path,
             x=0,
-            y=0,
+            y=self.banner_height,
+            width=self.page_width,
+            height=self.image_height,
             preserveAspectRatio=False,
-            mask="auto",
         )
