@@ -31,7 +31,7 @@ class PageData(BaseModel):
 
 class Colors(str, Enum):
     PRIMARY = "#2C3E50"      # Soft charcoal for main text
-    SECONDARY = "#FFFFFF"    # Pure white for text backgrounds
+    SECONDARY = "#FFE5D9"    # Soft peach for text backgrounds
     ACCENT = "#FF6B9D"       # Playful pink for page numbers
     OVERLAY = "#00000066"    # 40% black for text background overlays
     TEXT_LIGHT = "#FFFFFF"   # White for text on dark backgrounds

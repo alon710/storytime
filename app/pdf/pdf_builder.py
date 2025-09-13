@@ -75,17 +75,9 @@ class PDFBuilder:
         character_gender: Gender,
         previous_pages: list[PageData] | None = None,
     ):
-        # Draw full-page background image
+        # Draw full-page background image with proper aspect ratio handling
         if image_path:
-            c.drawImage(
-                image=image_path,
-                x=0,
-                y=0,
-                width=width,
-                height=height,
-                preserveAspectRatio=True,
-                mask='auto'
-            )
+            self._draw_fitted_image(c, image_path, width, height)
 
         # Add story text in bottom 1/5 of page
         story_text = page_data.story_text
@@ -173,33 +165,19 @@ class PDFBuilder:
         width: float,
         height: float,
     ):
-        """Draw story text in a banner at the bottom 1/5 of the page."""
+        """Draw story text in a full-width banner at the bottom 1/5 of the page."""
         # Calculate banner dimensions
         banner_height = height / 5
         banner_y = 0
-        margin = 20
-        padding = 15
+        padding = 20  # Internal padding for text readability
         
-        # Draw semi-transparent background with rounded corners
-        c.setFillColor(reportlab_colors.HexColor(Colors.OVERLAY))
-        c.roundRect(
-            x=margin,
-            y=banner_y + margin,
-            width=width - (2 * margin),
-            height=banner_height - (2 * margin),
-            radius=10,
-            stroke=0,
-            fill=1
-        )
-        
-        # Draw white background for better readability
+        # Draw full-width pastel background
         c.setFillColor(reportlab_colors.HexColor(Colors.SECONDARY))
-        c.roundRect(
-            x=margin + 3,  # Slight offset for shadow effect
-            y=banner_y + margin + 3,
-            width=width - (2 * margin) - 6,
-            height=banner_height - (2 * margin) - 6,
-            radius=8,
+        c.rect(
+            x=0,
+            y=banner_y,
+            width=width,
+            height=banner_height,
             stroke=0,
             fill=1
         )
@@ -209,11 +187,11 @@ class PDFBuilder:
         font_size = 16
         line_height = 20
         
-        # Calculate text area
-        text_x = margin + padding
-        text_y = banner_y + margin + padding
-        text_width = width - (2 * margin) - (2 * padding)
-        text_height = banner_height - (2 * margin) - (2 * padding)
+        # Calculate text area with padding for readability
+        text_x = padding
+        text_y = banner_y + padding
+        text_width = width - (2 * padding)
+        text_height = banner_height - (2 * padding)
         
         self._draw_wrapped_text_with_font(
             c=c,
@@ -276,3 +254,48 @@ class PDFBuilder:
             line_width = c.stringWidth(line, font_name, font_size)
             line_x = x + (max_width - line_width) / 2
             c.drawString(line_x, start_y - (i * line_height), line)
+
+    def _draw_fitted_image(self, c: canvas.Canvas, image_path: str, page_width: float, page_height: float):
+        """Draw image fitted to page, cropping if necessary to avoid black bars."""
+        try:
+            # Open image to get dimensions
+            from PIL import Image as PILImage
+            with PILImage.open(image_path) as img:
+                img_width, img_height = img.size
+                img_aspect = img_width / img_height
+                page_aspect = page_width / page_height
+                
+                if img_aspect > page_aspect:
+                    # Image is wider than page - crop width
+                    fitted_height = page_height
+                    fitted_width = fitted_height * img_aspect
+                    x_offset = (page_width - fitted_width) / 2
+                    y_offset = 0
+                else:
+                    # Image is taller than page - crop height
+                    fitted_width = page_width
+                    fitted_height = fitted_width / img_aspect
+                    x_offset = 0
+                    y_offset = (page_height - fitted_height) / 2
+                
+                c.drawImage(
+                    image=image_path,
+                    x=x_offset,
+                    y=y_offset,
+                    width=fitted_width,
+                    height=fitted_height,
+                    preserveAspectRatio=True,
+                    mask='auto'
+                )
+        except Exception as e:
+            logger.error(f"Failed to draw fitted image: {e}")
+            # Fallback to original method
+            c.drawImage(
+                image=image_path,
+                x=0,
+                y=0,
+                width=page_width,
+                height=page_height,
+                preserveAspectRatio=False,
+                mask='auto'
+            )
