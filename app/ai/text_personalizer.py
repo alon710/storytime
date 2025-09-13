@@ -3,7 +3,7 @@
 from google import genai
 from app.utils.logger import logger
 from app.ai.base import BaseAIGenerator
-from app.utils.schemas import Gender
+from app.utils.schemas import Gender, PageData
 
 
 class TextPersonalizer(BaseAIGenerator):
@@ -23,7 +23,7 @@ class TextPersonalizer(BaseAIGenerator):
         character_name: str,
         character_age: int,
         character_gender: Gender,
-        previous_pages: list[dict] | None = None,
+        previous_pages: list[PageData] | None = None,
     ) -> str:
         return self._personalize_impl(
             text=text,
@@ -39,14 +39,14 @@ class TextPersonalizer(BaseAIGenerator):
         character_name: str,
         character_age: int,
         character_gender: Gender,
-        previous_pages: list[dict] | None = None,
+        previous_pages: list[PageData] | None = None,
     ) -> str | None:
         # Build context from previous pages if provided
         context_info = ""
         if previous_pages:
             context_info = "\n\nPrevious story context for continuity:\n"
             for i, page in enumerate(previous_pages[-3:], 1):  # Last 3 pages only
-                context_info += f"Page {i}: {page.get('title', '')} - {page.get('story_text', '')}\n"
+                context_info += f"Page {i}: {page.title} - {page.story_text}\n"
 
             logger.info(
                 "Including previous pages for text personalization continuity",

@@ -4,7 +4,7 @@ import time
 from typing import Optional
 
 from google import genai
-from app.utils.schemas import Gender
+from app.utils.schemas import Gender, PageData
 from app.utils.settings import settings
 from app.ai.character_image_generator import CharacterImageGenerator
 from app.ai.text_personalizer import TextPersonalizer
@@ -28,10 +28,10 @@ class StoryProcessor:
         character_name: str,
         character_age: int,
         character_gender: Gender,
-        pages_data: list[dict],
+        pages_data: list[PageData],
         image_paths,
     ) -> Optional[str]:
-        return self.pdf_builder.create_booklet(
+        return self.pdf_builder.create_book(
             book_title=book_title,
             character_name=character_name,
             character_age=character_age,
@@ -42,7 +42,7 @@ class StoryProcessor:
 
     def process_story(
         self,
-        pages_data: list[dict],
+        pages_data: list[PageData],
         character_images,
         character_name: str,
         character_age: int,
@@ -140,7 +140,7 @@ class StoryProcessor:
                 "Generating image with context",
                 page_number=i + 1,
                 total_pages=len(pages_data),
-                page_title=page_data["title"],
+                page_title=page_data.title,
                 previous_pages_count=len(previous_pages) if previous_pages else 0,
                 previous_images_count=len(previous_images) if previous_images else 0,
             )
@@ -150,10 +150,10 @@ class StoryProcessor:
                 character_name,
                 character_age,
                 character_gender,
-                page_data["illustration_prompt"],
+                page_data.illustration_prompt,
                 book_title,
-                page_data["title"],
-                page_data.get("story_text", ""),
+                page_data.title,
+                page_data.story_text,
                 previous_pages,
                 previous_images,
             )

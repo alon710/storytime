@@ -9,7 +9,24 @@ import json
 from pathlib import Path
 from app.ai.story_processor import StoryProcessor
 from app.utils.settings import settings
+from app.utils.schemas import PageData
 
+
+def convert_dict_to_pagedata(page_dict: dict) -> PageData:
+    """Convert a dictionary to PageData object."""
+    return PageData(
+        title=page_dict.get("title", ""),
+        story_text=page_dict.get("story_text", ""),
+        illustration_prompt=page_dict.get("illustration_prompt", "")
+    )
+
+def convert_pagedata_to_dict(page_data: PageData) -> dict:
+    """Convert PageData object to dictionary for session state."""
+    return {
+        "title": page_data.title,
+        "story_text": page_data.story_text,
+        "illustration_prompt": page_data.illustration_prompt
+    }
 
 def load_story_templates():
     """Load all JSON templates from story_templates directory"""
@@ -204,8 +221,11 @@ def main():
                 processor = StoryProcessor()
                 progress_bar = st.progress(0)
 
+                # Convert session state pages to PageData objects
+                pages_data = [convert_dict_to_pagedata(page) for page in st.session_state.pages]
+                
                 results = processor.process_story(
-                    pages_data=st.session_state.pages,
+                    pages_data=pages_data,
                     character_images=character_images,
                     character_name=character_name,
                     character_age=character_age,

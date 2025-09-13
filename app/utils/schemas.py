@@ -1,4 +1,5 @@
 from enum import Enum
+from pydantic import BaseModel
 
 
 class ArtStyle(str, Enum):
@@ -20,3 +21,9 @@ class Suffix(str, Enum):
     jpeg = ".jpeg"
     ttf = ".ttf"
     pdf = ".pdf"
+
+
+class PageData(BaseModel):
+    title: str
+    story_text: str
+    illustration_prompt: str

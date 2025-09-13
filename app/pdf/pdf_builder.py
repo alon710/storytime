@@ -5,8 +5,9 @@ from reportlab.lib import colors as reportlab_colors
 from app.ai.text_personalizer import TextPersonalizer
 from app.pdf.font_manager import FontManager
 from app.utils.logger import logger
-from app.utils.schemas import Gender, Suffix
+from app.utils.schemas import Gender, Suffix, PageData
 from app.utils.temp_file import save_bytes_to_temp
+import io
 
 
 class PDFBuilder:
@@ -15,18 +16,15 @@ class PDFBuilder:
         self.font_manager = FontManager()
         self.fonts = self.font_manager.setup_fonts()
 
-    def create_booklet(
+    def create_book(
         self,
         book_title: str,
         character_name: str,
         character_age: int,
         character_gender: Gender,
-        pages_data: list[dict],
+        pages_data: list[PageData],
         image_paths: list[Optional[str]],
     ) -> Optional[str]:
-        import io
-        
-        # Create PDF in memory buffer
         buffer = io.BytesIO()
         c = canvas.Canvas(buffer, pagesize=A4)
         width, height = A4
@@ -38,12 +36,16 @@ class PDFBuilder:
             fonts_available=self.fonts,
         )
 
-        # Title page
-        self._create_title_page(c, width, height, book_title, character_age)
+        self._create_title_page(
+            c=c,
+            width=width,
+            height=height,
+            book_title=book_title,
+            character_age=character_age,
+        )
 
-        # Story pages with AI-generated colors
         for i, (page_data, image_path) in enumerate(zip(pages_data, image_paths)):
-            c.showPage()  # New page
+            c.showPage()
 
             previous_pages = pages_data[:i] if i > 0 else None
 
@@ -60,13 +62,12 @@ class PDFBuilder:
             )
 
         c.save()
-        
-        # Save PDF buffer to temporary file
+
         pdf_data = buffer.getvalue()
         buffer.close()
-        
+
         temp_pdf_path = save_bytes_to_temp(pdf_data, Suffix.pdf)
-        
+
         logger.info(
             "PDF creation completed",
             temp_pdf_path=temp_pdf_path,
@@ -116,51 +117,36 @@ class PDFBuilder:
         c: canvas.Canvas,
         width: float,
         height: float,
-        page_data: dict,
+        page_data: PageData,
         image_path: Optional[str],
         character_name: str,
         character_age: int,
         character_gender: Gender,
-        previous_pages: list[dict] | None = None,
+        previous_pages: list[PageData] | None = None,
     ):
         colors = {"background": "#FFF8E7", "banner": "#E8F4FD", "accent": "#FFE4E1"}
-
-        # Full-page background color
         c.setFillColor(reportlab_colors.HexColor(colors["background"]))
-        c.rect(0, 0, width, height, stroke=0, fill=1)
+        c.rect(x=0, y=0, width=width, height=height, stroke=0, fill=1)
 
-        # Full-page image (if available) with padding
-        image_margin = 20
+        image_margin: int = 20
         if image_path:
-            try:
-                # Calculate image dimensions to fill most of the page
-                img_width = width - (2 * image_margin)
-                img_height = height - 120  # Leave space for text banner
-                c.drawImage(
-                    image_path,
-                    image_margin,
-                    60,  # Start above text banner
-                    width=img_width,
-                    height=img_height,
-                    preserveAspectRatio=True,
-                )
-            except Exception as e:
-                logger.warning(
-                    "Failed to draw story image",
-                    image_path=image_path,
-                    error=str(e),
-                )
-                self._draw_image_placeholder(c, width, height, colors["accent"])
-        else:
-            self._draw_image_placeholder(c, width, height, colors["accent"])
+            img_width = width - (2 * image_margin)
+            img_height = height - 120
+            c.drawImage(
+                image=image_path,
+                x=image_margin,
+                y=60,
+                width=img_width,
+                height=img_height,
+                preserveAspectRatio=True,
+            )
 
-        # Colored text banner at bottom
-        banner_height = 80
-        c.setFillColor(reportlab_colors.HexColor(colors["banner"]))
+        banner_height: int = 80
+
+        c.setFillColor(aColor=reportlab_colors.HexColor(val=colors["banner"]))
         self._draw_rounded_rect(c, 0, 0, width, banner_height, 0)
 
-        # Story text in banner
-        story_text = page_data.get("story_text", "")
+        story_text = page_data.story_text
         if story_text.strip():
             personalized_text = self.text_personalizer.personalize(
                 story_text,
@@ -196,9 +182,9 @@ class PDFBuilder:
         # Title text
         c.setFont(self.fonts["title"], 18)
         c.setFillColor(reportlab_colors.HexColor("#2E4057"))
-        title_width = c.stringWidth(page_data["title"], self.fonts["title"], 18)
+        title_width = c.stringWidth(page_data.title, self.fonts["title"], 18)
         title_x = (width - title_width) / 2
-        c.drawString(title_x, height - 40, page_data["title"])
+        c.drawString(title_x, height - 40, page_data.title)
 
     def _draw_wrapped_text_in_banner(
         self,
@@ -267,24 +253,6 @@ class PDFBuilder:
             # For simplicity, just use the first color - real gradients are complex in ReportLab
             c.setFillColor(reportlab_colors.HexColor(color1))
             c.rect(0, i * step_height, width, step_height, stroke=0, fill=1)
-
-    def _draw_image_placeholder(
-        self, c: canvas.Canvas, width: float, height: float, accent_color: str
-    ):
-        """Draw a placeholder when image is not available."""
-        # Light background
-        c.setFillColor(reportlab_colors.HexColor(accent_color))
-        placeholder_height = height - 120
-        c.rect(20, 60, width - 40, placeholder_height, stroke=0, fill=1)
-
-        # Placeholder text
-        c.setFont(self.fonts["body"], 16)
-        c.setFillColor(reportlab_colors.HexColor("#7B8FA4"))
-        placeholder_text = "✨ Illustration Coming Soon ✨"
-        text_width = c.stringWidth(placeholder_text, self.fonts["body"], 16)
-        text_x = (width - text_width) / 2
-        text_y = height / 2
-        c.drawString(text_x, text_y, placeholder_text)
 
     def _draw_wrapped_text(
         self,
