@@ -1,11 +1,11 @@
 import io
-import tempfile
 from typing import Optional
 from PIL import Image
 from google import genai
 from app.utils.logger import logger
 from app.ai.base import BaseAIGenerator
-from app.utils.schemas import ArtStyle, Gender
+from app.utils.schemas import ArtStyle, Gender, Suffix
+from app.utils.temp_file import save_image_to_temp
 
 
 class CharacterGenerator(BaseAIGenerator):
@@ -134,17 +134,14 @@ class CharacterGenerator(BaseAIGenerator):
                 image_data = part.inline_data.data
                 generated_image = Image.open(io.BytesIO(image_data))
 
-                temp_path = self._save_generated_image(generated_image)
-
-                return temp_path
+                if temp_path := save_image_to_temp(
+                    generated_image,
+                    suffix=Suffix.png,
+                ):
+                    return temp_path
 
         logger.warning(
             "No character image generated - text response only",
             response_text=response_text[:200],
         )
         return None
-
-    def _save_generated_image(self, generated_image: Image.Image) -> str:
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
-            generated_image.save(tmp_file.name, "PNG")
-            return tmp_file.name

@@ -1,11 +1,12 @@
 """Font management module for child-friendly PDF generation."""
 
-import tempfile
 from typing import Optional
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from app.utils.logger import logger
 import requests
+from app.utils.schemas import Suffix
+from app.utils.temp_file import save_bytes_to_temp
 
 
 class FontManager:
@@ -58,9 +59,16 @@ class FontManager:
             response.raise_for_status()
 
             # Save to temporary file
-            with tempfile.NamedTemporaryFile(suffix=".ttf", delete=False) as tmp_file:
-                tmp_file.write(response.content)
-                font_path = tmp_file.name
+            font_path = save_bytes_to_temp(
+                data=response.content,
+                suffix=Suffix.ttf,
+            )
+            if not font_path:
+                logger.warning(
+                    "Failed to save font to temporary file",
+                    font_name=font_name,
+                )
+                return None
 
             # Register with ReportLab
             try:

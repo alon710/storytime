@@ -1,11 +1,12 @@
 import io
-import tempfile
 from typing import Optional
 from PIL import Image
 from google import genai
 from app.utils.logger import logger
 from app.ai.base import BaseAIGenerator
-from app.utils.schemas import Gender
+from app.utils.schemas import Gender, Suffix
+from app.utils.temp_file import save_image_to_temp
+from jinja2 import Template
 
 
 class ImageGenerator(BaseAIGenerator):
@@ -92,18 +93,15 @@ class ImageGenerator(BaseAIGenerator):
                 image_data = part.inline_data.data
                 generated_image = Image.open(io.BytesIO(image_data))
 
-                with tempfile.NamedTemporaryFile(
-                    suffix=".png",
-                    delete=False,
-                ) as tmp_file:
-                    generated_image.save(tmp_file.name, "PNG")
-                    temp_path = tmp_file.name
-
-                logger.info(
-                    "Successfully generated image for page",
-                    page_title=page_title,
-                )
-                return temp_path
+                if temp_path := save_image_to_temp(
+                    image=generated_image,
+                    suffix=Suffix.png,
+                ):
+                    logger.info(
+                        "Successfully generated image for page",
+                        page_title=page_title,
+                    )
+                    return temp_path
 
         logger.warning(
             "No image generated for page - text response only",
@@ -124,7 +122,7 @@ class ImageGenerator(BaseAIGenerator):
         previous_pages: list[dict] | None,
         num_previous_images: int,
     ) -> str:
-        template = self.env.get_template("image_generation.j2")
+        template: Template = self.env.get_template("image_generation.j2")
         return template.render(
             book_title=book_title,
             page_title=page_title,

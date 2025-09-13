@@ -12,3 +12,10 @@ class ArtStyle(str, Enum):
 class Gender(str, Enum):
     boy = "boy"
     girl = "girl"
+
+
+class Suffix(str, Enum):
+    png = ".png"
+    jpg = ".jpg"
+    jpeg = ".jpeg"
+    ttf = ".ttf"
