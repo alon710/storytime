@@ -75,11 +75,11 @@ class StoryProcessor:
                 progress_bar.progress(85, "Creating PDF booklet...")
 
             pdf_path = self.create_pdf_booklet(
-                character_name,
-                character_age,
-                character_gender,
-                pages_data,
-                image_paths,
+                character_name=character_name,
+                character_age=character_age,
+                character_gender=character_gender,
+                pages_data=pages_data,
+                image_paths=image_paths,
             )
 
             if progress_bar:
@@ -122,7 +122,9 @@ class StoryProcessor:
                     int(progress), f"Generating image {i + 1}/{len(pages_data)}..."
                 )
 
-            previous_pages = [page.model_dump() for page in pages_data[:i]] if i > 0 else None
+            previous_pages = (
+                [page.model_dump() for page in pages_data[:i]] if i > 0 else None
+            )
             previous_images = image_paths[:i] if i > 0 else None
 
             logger.info(

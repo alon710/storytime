@@ -3,7 +3,6 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors as reportlab_colors
 from app.ai.text_personalizer import TextPersonalizer
-from app.utils.logger import logger
 from app.utils.schemas import Colors, Gender, Suffix, PageData
 from app.utils.temp_file import save_bytes_to_temp
 import io
@@ -13,6 +12,13 @@ class PDFBuilder:
     def __init__(self, text_personalizer: TextPersonalizer):
         self.text_personalizer = text_personalizer
         self.font = "Helvetica"
+        self.page_width, self.page_height = A4
+        self.image_height = self.page_height * 4 / 5
+        self.text_area_height = self.page_height / 5
+        self.title_font_size = 24
+        self.body_font_size = 16
+        self.banner_height = self.page_height / 5
+        self.padding = 10
 
     def create_book(
         self,
@@ -24,15 +30,12 @@ class PDFBuilder:
     ) -> Optional[str]:
         buffer = io.BytesIO()
         c = canvas.Canvas(buffer, pagesize=A4)
-        width, height = A4
 
         for i, (page_data, image_path) in enumerate(zip(pages_data, image_paths)):
             previous_pages = pages_data[:i] if i > 0 else None
 
             self._create_story_page(
                 c=c,
-                width=width,
-                height=height,
                 page_data=page_data,
                 image_path=image_path,
                 character_name=character_name,
@@ -46,16 +49,11 @@ class PDFBuilder:
         pdf_data = buffer.getvalue()
         buffer.close()
 
-        temp_pdf_path = save_bytes_to_temp(pdf_data, Suffix.pdf)
-
-        logger.info("PDF creation completed")
-        return temp_pdf_path
+        return save_bytes_to_temp(pdf_data, Suffix.pdf)
 
     def _create_story_page(
         self,
         c: canvas.Canvas,
-        width: float,
-        height: float,
         page_data: PageData,
         image_path: str | None,
         character_name: str,
@@ -63,13 +61,10 @@ class PDFBuilder:
         character_gender: Gender,
         previous_pages: list[PageData] | None = None,
     ):
-        if image_path:
-            self._draw_fitted_image(
-                c=c,
-                image_path=image_path,
-                width=width,
-                height=height,
-            )
+        self._draw_fitted_image(
+            c=c,
+            image_path=image_path,
+        )
 
         if story_text := page_data.story_text:
             personalized_text = self.text_personalizer.personalize(
@@ -80,12 +75,7 @@ class PDFBuilder:
                 previous_pages,
             )
 
-            self._draw_text_banner(
-                c=c,
-                text=personalized_text,
-                width=width,
-                height=height,
-            )
+            self._draw_text_banner(c=c, text=personalized_text)
 
     def _draw_wrapped_text(
         self,
@@ -120,24 +110,20 @@ class PDFBuilder:
         self,
         c: canvas.Canvas,
         text: str,
-        width: float,
-        height: float,
     ):
-        banner_height: float = height / 5
-        banner_y: int = 0
-        padding: int = 20
-
         c.setFillColor(reportlab_colors.HexColor(Colors.SECONDARY))
-        c.rect(x=0, y=banner_y, width=width, height=banner_height, stroke=0, fill=1)
+        c.rect(
+            x=0, y=0, width=self.page_width, height=self.banner_height, stroke=0, fill=1
+        )
 
         c.setFillColor(reportlab_colors.HexColor(Colors.PRIMARY))
         font_size = 16
         line_height = 20
 
-        text_x = padding
-        text_y = banner_y + padding
-        text_width = width - (2 * padding)
-        text_height = banner_height - (2 * padding)
+        text_x = self.padding
+        text_y = 0 + self.padding
+        text_width = self.page_width - (2 * self.padding)
+        text_height = self.banner_height - (2 * self.padding)
 
         self._draw_wrapped_text_with_font(
             c=c,
@@ -194,18 +180,14 @@ class PDFBuilder:
             c.drawString(line_x, start_y - (i * line_height), line)
 
     def _draw_fitted_image(
-        self, c: canvas.Canvas, image_path: str, page_width: float, page_height: float
+        self,
+        c: canvas.Canvas,
+        image_path: str,
     ):
-        """Draw image in top 4/5 of page, leaving bottom 1/5 for text."""
-        image_height = page_height * 4 / 5
-        image_y = page_height / 5
-
         c.drawImage(
             image=image_path,
             x=0,
-            y=image_y,
-            width=page_width,
-            height=image_height,
+            y=0,
             preserveAspectRatio=False,
             mask="auto",
         )
