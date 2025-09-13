@@ -256,46 +256,13 @@ class PDFBuilder:
             c.drawString(line_x, start_y - (i * line_height), line)
 
     def _draw_fitted_image(self, c: canvas.Canvas, image_path: str, page_width: float, page_height: float):
-        """Draw image fitted to page, cropping if necessary to avoid black bars."""
-        try:
-            # Open image to get dimensions
-            from PIL import Image as PILImage
-            with PILImage.open(image_path) as img:
-                img_width, img_height = img.size
-                img_aspect = img_width / img_height
-                page_aspect = page_width / page_height
-                
-                if img_aspect > page_aspect:
-                    # Image is wider than page - crop width
-                    fitted_height = page_height
-                    fitted_width = fitted_height * img_aspect
-                    x_offset = (page_width - fitted_width) / 2
-                    y_offset = 0
-                else:
-                    # Image is taller than page - crop height
-                    fitted_width = page_width
-                    fitted_height = fitted_width / img_aspect
-                    x_offset = 0
-                    y_offset = (page_height - fitted_height) / 2
-                
-                c.drawImage(
-                    image=image_path,
-                    x=x_offset,
-                    y=y_offset,
-                    width=fitted_width,
-                    height=fitted_height,
-                    preserveAspectRatio=True,
-                    mask='auto'
-                )
-        except Exception as e:
-            logger.error(f"Failed to draw fitted image: {e}")
-            # Fallback to original method
-            c.drawImage(
-                image=image_path,
-                x=0,
-                y=0,
-                width=page_width,
-                height=page_height,
-                preserveAspectRatio=False,
-                mask='auto'
-            )
+        """Draw image stretched to fill entire page - no black bars."""
+        c.drawImage(
+            image=image_path,
+            x=0,
+            y=0,
+            width=page_width,
+            height=page_height,
+            preserveAspectRatio=False,
+            mask='auto'
+        )
