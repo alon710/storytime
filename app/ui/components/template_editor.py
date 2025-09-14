@@ -5,21 +5,10 @@ from app.utils.schemas import PageData, StoryTemplate
 
 
 class TemplateEditor:
-    """Editor for story templates allowing page management and text editing."""
-
     @staticmethod
     def render(template: StoryTemplate) -> StoryTemplate:
-        """Render the template editor interface.
-
-        Args:
-            template: StoryTemplate to edit
-
-        Returns:
-            Updated StoryTemplate with edits applied
-        """
         st.subheader("Edit Story Template")
 
-        # Edit template metadata
         (col1,) = st.columns(1)
         with col1:
             template.default_title = st.text_input(
@@ -36,18 +25,19 @@ class TemplateEditor:
         st.divider()
         st.write(f"**Pages ({len(template.pages)})**")
 
-        # Edit each page
         updated_pages = []
 
         for i, page in enumerate(template.pages):
             with st.container():
-                # Page header with remove button
-                header_col1, header_col2 = st.columns([10, 1])
+                header_col1, header_col2 = st.columns([0.95, 0.05])
                 with header_col1:
                     st.write(f"**Page {i + 1}**")
                 with header_col2:
                     if st.button(
-                        "✕", key=f"remove_template_page_{i}", help="Remove this page"
+                        "❌",
+                        key=f"remove_template_page_{i}",
+                        help="Remove this page",
+                        type="tertiary",
                     ):
                         # Skip this page and trigger rerun
                         template.pages = [

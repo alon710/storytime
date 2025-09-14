@@ -65,7 +65,6 @@ def render_seed_images_step() -> None:
 
 
 def render_story_template_step() -> None:
-    """Render Step 2: Load and edit story template."""
     st.header("Step 2: Load and Edit Story Template")
 
     templates = load_story_templates()
@@ -74,11 +73,9 @@ def render_story_template_step() -> None:
         st.error("No story templates found in app/story_templates/")
         return
 
-    # Template selection
-    template_names = list(templates.keys())
     selected_template_name = st.selectbox(
         "Select a story template",
-        template_names,
+        options=list(templates.keys()),
         help="Choose a pre-defined story structure to edit",
     )
 
