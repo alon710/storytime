@@ -60,8 +60,8 @@ def render_seed_images_step() -> None:
     seed_data = SeedImageUploader.render()
 
     if seed_data:
-        st.session_state[SessionStateKeys.SEED_IMAGES] = seed_data.get("images", [])
-        st.session_state[SessionStateKeys.METADATA] = seed_data.get("metadata")
+        st.session_state[SessionStateKeys.SEED_IMAGES] = seed_data.images
+        st.session_state[SessionStateKeys.METADATA] = seed_data.metadata
 
 
 def render_story_template_step() -> None:

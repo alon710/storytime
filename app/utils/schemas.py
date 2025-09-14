@@ -4,8 +4,6 @@ from pydantic import BaseModel
 
 
 class SessionStateKeys:
-    """Constants for session state keys."""
-
     SEED_IMAGES = "seed_images"
     METADATA = "metadata"
     STORY_TEMPLATE = "story_template"
@@ -60,6 +58,11 @@ class StoryMetadata(BaseModel):
     character_name: str
 
 
+class SeedImageData(BaseModel):
+    images: list = []
+    metadata: Optional[StoryMetadata] = None
+
+
 class StoryTemplate(BaseModel):
     name: str
     description: str
@@ -68,8 +71,6 @@ class StoryTemplate(BaseModel):
 
 
 class GeneratedPage(BaseModel):
-    """Generated page with content and image."""
-
     page_number: int
     title: str
     text: str

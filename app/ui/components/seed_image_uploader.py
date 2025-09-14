@@ -2,7 +2,7 @@ import streamlit as st
 from typing import Optional
 from pathlib import Path
 from google import genai
-from app.utils.schemas import StoryMetadata, ArtStyle, SessionStateKeys
+from app.utils.schemas import StoryMetadata, ArtStyle, SessionStateKeys, SeedImageData
 from app.utils.settings import settings
 from app.ai.image_generator import ImageGenerator
 from app.utils.schemas import Gender, ReferenceMethod
@@ -21,7 +21,7 @@ class SeedImageUploader:
                 st.session_state[key] = value
 
     @staticmethod
-    def render() -> Optional[dict]:
+    def render() -> Optional[SeedImageData]:
         SeedImageUploader.initialize_session_state()
 
         st.subheader("Character Reference")
@@ -162,10 +162,7 @@ class SeedImageUploader:
                 st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]
             ]
 
-        if final_reference:
-            return {"images": final_reference, "metadata": metadata}
-
-        if system_prompt:
-            return {"images": [], "metadata": metadata}
+        if final_reference or system_prompt:
+            return SeedImageData(images=final_reference or [], metadata=metadata)
 
         return None
