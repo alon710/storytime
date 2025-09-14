@@ -1,16 +1,5 @@
 from app.ui.pages.storytime import main
 import streamlit as st
-import tomllib
-from pathlib import Path
-
-
-def get_version():
-    try:
-        with open(file=Path("pyproject.toml"), mode="rb") as f:
-            data: dict = tomllib.load(f)
-            return data["project"]["version"]
-    except Exception:
-        return "Unknown Version"
 
 
 st.set_page_config(
@@ -19,9 +8,8 @@ st.set_page_config(
     layout="centered",
 )
 
-version = get_version()
 st.title("StoryTime")
-st.caption(f"AI-Powered Story Generator • Version {version}")
+st.caption("AI-Powered Story Generator")
 st.divider()
 
 
