@@ -14,10 +14,16 @@ class SessionStateKeys:
     CHAR_AGE = "char_age"
     CHAR_GENDER = "char_gender"
     LANGUAGE = "language"
-    GENERATED_CHARACTER_REF = "generated_character_ref"
-    UPLOADED_REFERENCE = "uploaded_reference"
+    GENERATED_CHARACTER_SEED = "generated_character_seed"
+    UPLOADED_SEED = "uploaded_seed"
     ART_STYLE = "art_style"
-    SYSTEM_PROMPT_SEED = "system_prompt_seed"
+    STEP = "step"
+
+
+class Step(str, Enum):
+    story_parameters = "story_parameters"
+    edit_template = "edit_template"
+    generate_story = "generate_story"
 
 
 class Gender(str, Enum):
@@ -30,8 +36,8 @@ class Language(str, Enum):
     hebrew = "Hebrew"
 
 
-class ReferenceMethod(str, Enum):
-    upload = "Upload Reference Image"
+class SeedMethod(str, Enum):
+    upload = "Upload Seed Image"
     generate = "Generate from Photos"
 
 

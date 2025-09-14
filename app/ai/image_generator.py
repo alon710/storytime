@@ -21,7 +21,7 @@ class ImageGenerator(BaseAIGenerator):
     def __init__(self, client: genai.Client, model: str):
         super().__init__(client, model)
 
-    def generate_character_reference(
+    def generate_character_seed(
         self,
         character_images,
         character_name: str,
@@ -84,7 +84,7 @@ class ImageGenerator(BaseAIGenerator):
             return None
 
         except Exception as e:
-            logger.error(f"Failed to generate character reference: {str(e)}")
+            logger.error(f"Failed to generate character seed: {str(e)}")
             return None
 
     def generate(
@@ -104,7 +104,7 @@ class ImageGenerator(BaseAIGenerator):
             illustration_prompt: Prompt describing the illustration
             page_title: Title of the current page
             story_text: Text content of the page
-            seed_images: Optional seed images for visual reference (character reference)
+            seed_images: Optional seed images for visual reference (character seed)
             metadata: Optional metadata with art style and instructions
             system_prompt: Optional system prompt for generation
             previous_pages: Previous pages for context
@@ -114,7 +114,6 @@ class ImageGenerator(BaseAIGenerator):
             Path to generated image file, or None on failure
         """
         try:
-            # Prepare character reference images (seed images)
             character_images = []
             if seed_images:
                 for img in seed_images:
@@ -125,11 +124,11 @@ class ImageGenerator(BaseAIGenerator):
                             character_images.append(Image.open(img))
                     except Exception as e:
                         logger.warning(f"Failed to open seed image: {e}")
+            else:
+                logger.info("No seed images provided")
 
-            # Prepare previous images for context (up to 5)
             context_images = []
             if previous_images:
-                # Take up to 5 most recent images for context
                 recent_images = (
                     previous_images[-5:]
                     if len(previous_images) > 5
@@ -141,27 +140,22 @@ class ImageGenerator(BaseAIGenerator):
                     except Exception as e:
                         logger.warning(f"Failed to open previous image: {e}")
 
-            # Extract character info from session state or defaults
-            # We can access this from streamlit session state if needed
-            character_name = "Hero"
-            character_age = 5
-            character_gender = "child"
-
-            # Try to extract from system prompt if available
-            if metadata and metadata.instructions:
-                # Simple extraction from instructions
-                instructions_lower = metadata.instructions.lower()
-                if "boy" in instructions_lower:
-                    character_gender = "boy"
-                elif "girl" in instructions_lower:
-                    character_gender = "girl"
-
-                # Try to extract age if mentioned
-                import re
-
-                age_match = re.search(r"(\d+)[\s-]?year", instructions_lower)
-                if age_match:
-                    character_age = int(age_match.group(1))
+            if metadata:
+                character_name = (
+                    metadata.character_name
+                    if hasattr(metadata, "character_name")
+                    else "Hero"
+                )
+                character_age = metadata.age if hasattr(metadata, "age") else 5
+                character_gender = (
+                    metadata.gender if hasattr(metadata, "gender") else "child"
+                )
+                logger.info("Using metadata", metadata)
+            else:
+                character_name = "Hero"
+                character_age = 5
+                character_gender = "child"
+                logger.warning("No metadata provided, using default character values")
 
             # Get art style description if metadata contains art style
             art_style_description = None
@@ -186,7 +180,7 @@ class ImageGenerator(BaseAIGenerator):
                 art_style_description=art_style_description,
             )
 
-            # Prepare contents: prompt + character reference + previous images for context
+            # Prepare contents: prompt + character seed + previous images for context
             contents = [prompt] + character_images + context_images
 
             # Generate image with specific generation config for consistency
@@ -237,6 +231,9 @@ class ImageGenerator(BaseAIGenerator):
                     ):
                         logger.info(
                             f"Successfully generated image for page: {page_title} (size: {target_size}x{target_size})"
+                        )
+                        logger.info(
+                            f"Image generation used {len(character_images)} seed images as reference"
                         )
                         return temp_path
 

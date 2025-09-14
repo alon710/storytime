@@ -5,15 +5,15 @@ from google import genai
 from app.utils.schemas import StoryMetadata, ArtStyle, SessionStateKeys, SeedImageData
 from app.utils.settings import settings
 from app.ai.image_generator import ImageGenerator
-from app.utils.schemas import Gender, Language, ReferenceMethod
+from app.utils.schemas import Gender, Language, SeedMethod
 
 
 class SeedImageUploader:
     @staticmethod
     def initialize_session_state() -> None:
         defaults = {
-            SessionStateKeys.GENERATED_CHARACTER_REF: None,
-            SessionStateKeys.UPLOADED_REFERENCE: None,
+            SessionStateKeys.GENERATED_CHARACTER_SEED: None,
+            SessionStateKeys.UPLOADED_SEED: None,
         }
 
         for key, value in defaults.items():
@@ -24,11 +24,12 @@ class SeedImageUploader:
     def render() -> Optional[SeedImageData]:
         SeedImageUploader.initialize_session_state()
 
-        st.subheader("Character Reference")
+        st.header("Step 1: Story Parameters")
+        st.subheader("Character Seed")
 
-        reference_method = st.radio(
-            "Choose how to provide character reference",
-            options=[method.value for method in ReferenceMethod],
+        seed_method = st.radio(
+            "Choose how to provide character seed",
+            options=[method.value for method in SeedMethod],
             horizontal=True,
         )
 
@@ -73,53 +74,53 @@ class SeedImageUploader:
 
         system_prompt = st.text_area(
             "System Prompt (Optional)",
-            placeholder="Additional character details, themes, mood, or specific requirements for the story",
+            value=st.session_state.get(SessionStateKeys.SYSTEM_PROMPT, ""),
             height=100,
-            key=SessionStateKeys.SYSTEM_PROMPT_SEED,
+            help="Additional character details, themes, mood, or specific requirements for the story",
+            placeholder="Additional character details, themes, mood, or specific requirements for the story",
+            key=SessionStateKeys.SYSTEM_PROMPT,
         )
 
         st.divider()
 
-        if reference_method == ReferenceMethod.upload.value:
-            uploaded_reference = st.file_uploader(
-                "Upload character reference image",
+        if seed_method == SeedMethod.upload.value:
+            uploaded_seed = st.file_uploader(
+                "Upload character seed image",
                 type=["png", "jpg", "jpeg"],
                 accept_multiple_files=False,
-                help="Upload a character reference image to use for story generation",
+                help="Upload a character seed image to use for story generation",
             )
 
-            if uploaded_reference:
-                st.session_state[SessionStateKeys.UPLOADED_REFERENCE] = (
-                    uploaded_reference
-                )
-                st.write("**Uploaded Reference Image:**")
-                st.image(uploaded_reference, width="stretch")
-                st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF] = None
+            if uploaded_seed:
+                st.session_state[SessionStateKeys.UPLOADED_SEED] = uploaded_seed
+                st.write("**Uploaded Seed Image:**")
+                st.image(uploaded_seed, width="stretch")
+                st.session_state[SessionStateKeys.GENERATED_CHARACTER_SEED] = None
 
-        elif reference_method == ReferenceMethod.generate.value:
+        elif seed_method == SeedMethod.generate.value:
             uploaded_files = st.file_uploader(
                 "Upload character photos",
                 type=["png", "jpg", "jpeg"],
                 accept_multiple_files=True,
-                help="Upload photos to generate a character reference image",
+                help="Upload photos to generate a character seed image",
             )
 
             if uploaded_files:
                 st.write(f"**Uploaded {len(uploaded_files)} photo(s)**")
 
                 button_text = (
-                    "Regenerate Character Reference"
-                    if st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]
-                    else "Generate Character Reference"
+                    "Regenerate Character Seed"
+                    if st.session_state[SessionStateKeys.GENERATED_CHARACTER_SEED]
+                    else "Generate Character Seed"
                 )
 
                 if st.button(button_text, type="primary", width="stretch"):
-                    with st.spinner("Generating character reference..."):
+                    with st.spinner("Generating character seed..."):
                         try:
                             client = genai.Client(api_key=settings.google_api_key)
                             generator = ImageGenerator(client, settings.model)
 
-                            image_path = generator.generate_character_reference(
+                            image_path = generator.generate_character_seed(
                                 character_images=uploaded_files,
                                 character_name=character_name,
                                 character_age=character_age,
@@ -130,26 +131,24 @@ class SeedImageUploader:
 
                             if image_path:
                                 st.session_state[
-                                    SessionStateKeys.GENERATED_CHARACTER_REF
+                                    SessionStateKeys.GENERATED_CHARACTER_SEED
                                 ] = image_path
-                                st.session_state[
-                                    SessionStateKeys.UPLOADED_REFERENCE
-                                ] = None
-                                st.success("Character reference generated!")
+                                st.session_state[SessionStateKeys.UPLOADED_SEED] = None
+                                st.success("Character seed generated!")
                                 st.rerun()
                             else:
-                                st.error("Failed to generate character reference")
+                                st.error("Failed to generate character seed")
                         except Exception as e:
-                            st.error(f"Error generating character reference: {str(e)}")
+                            st.error(f"Error generating character seed: {str(e)}")
 
             if (
-                st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]
+                st.session_state[SessionStateKeys.GENERATED_CHARACTER_SEED]
                 and Path(
-                    st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]
+                    st.session_state[SessionStateKeys.GENERATED_CHARACTER_SEED]
                 ).exists()
             ):
                 st.divider()
-                st.image(st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF])
+                st.image(st.session_state[SessionStateKeys.GENERATED_CHARACTER_SEED])
 
         metadata = StoryMetadata(
             instructions=system_prompt if system_prompt else None,
@@ -160,16 +159,12 @@ class SeedImageUploader:
             language=language,
         )
 
-        final_reference = None
+        final_seed = None
 
-        if st.session_state[SessionStateKeys.UPLOADED_REFERENCE]:
-            final_reference = [st.session_state[SessionStateKeys.UPLOADED_REFERENCE]]
-        elif st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]:
-            final_reference = [
-                st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]
-            ]
+        if st.session_state[SessionStateKeys.UPLOADED_SEED]:
+            final_seed = [st.session_state[SessionStateKeys.UPLOADED_SEED]]
+        elif st.session_state[SessionStateKeys.GENERATED_CHARACTER_SEED]:
+            final_seed = [st.session_state[SessionStateKeys.GENERATED_CHARACTER_SEED]]
 
-        if final_reference or system_prompt:
-            return SeedImageData(images=final_reference or [], metadata=metadata)
-
-        return None
+        # Always return SeedImageData with metadata (including system prompt)
+        return SeedImageData(images=final_seed or [], metadata=metadata)

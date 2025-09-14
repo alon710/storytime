@@ -9,8 +9,6 @@ st.set_page_config(
 )
 
 st.title("StoryTime")
-st.caption("AI-Powered Story Generator")
-st.divider()
 
 
 if __name__ == "__main__":

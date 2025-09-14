@@ -1,5 +1,3 @@
-"""Temporary file utilities for the storytime application."""
-
 import tempfile
 from typing import Optional
 from PIL import Image

@@ -59,6 +59,10 @@ class StoryProcessor:
 
                 image_path = None
                 if seed_images or metadata:
+                    logger.info(f"Generating image with {len(seed_images) if seed_images else 0} seed images")
+                    if metadata:
+                        logger.info(f"Metadata: name={getattr(metadata, 'character_name', 'N/A')}, age={getattr(metadata, 'age', 'N/A')}, gender={getattr(metadata, 'gender', 'N/A')}")
+
                     previous_pages = (
                         [
                             {
