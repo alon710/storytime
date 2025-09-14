@@ -11,7 +11,7 @@ Request: {{ illustration_prompt }}{% if story_text and story_text.strip() %}
 Story context: {{ story_text }}{% endif %}{% if previous_pages %}
 
 Previous illustrations for visual continuity:
-{% for page in previous_pages[-3:] %}Page {{ loop.index }} ({{ page.get('title', '') }}): {{ page.get('illustration_prompt', '') }}
+{% for page in previous_pages[-5:] %}Page {{ loop.index }} ({{ page.get('title', '') }}): {{ page.get('illustration_prompt', '') }}
 {% endfor %}{% endif %}{% if num_previous_images > 0 %}
 
 Visual reference: You are provided with {{ num_previous_images }} previous illustration(s) from this storybook for visual consistency. Use these to maintain consistent character appearance, art style, and overall visual continuity.{% endif %}

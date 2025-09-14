@@ -93,6 +93,7 @@ def render_story_template_step() -> None:
             ]
 
         st.divider()
+
         edited_template = TemplateEditor.render(
             st.session_state[SessionStateKeys.EDITED_TEMPLATE]
         )
