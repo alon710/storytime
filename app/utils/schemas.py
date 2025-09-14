@@ -3,10 +3,42 @@ from typing import Optional
 from pydantic import BaseModel
 
 
+class SessionStateKeys:
+    SEED_IMAGES = "seed_images"
+    METADATA = "metadata"
+    STORY_TEMPLATE = "story_template"
+    EDITED_TEMPLATE = "edited_template"
+    GENERATED_PAGES = "generated_pages"
+    SYSTEM_PROMPT = "system_prompt"
+    CHAR_NAME = "char_name"
+    CHAR_AGE = "char_age"
+    CHAR_GENDER = "char_gender"
+    LANGUAGE = "language"
+    GENERATED_CHARACTER_REF = "generated_character_ref"
+    UPLOADED_REFERENCE = "uploaded_reference"
+    ART_STYLE = "art_style"
+    SYSTEM_PROMPT_SEED = "system_prompt_seed"
+
+
+class Gender(str, Enum):
+    boy = "Boy"
+    girl = "Girl"
+
+
+class Language(str, Enum):
+    english = "English"
+    hebrew = "Hebrew"
+
+
+class ReferenceMethod(str, Enum):
+    upload = "Upload Reference Image"
+    generate = "Generate from Photos"
+
+
 class ArtStyle(str, Enum):
+    ghibli = "ghibli"
     watercolor = "watercolor"
     cartoon = "cartoon"
-    ghibli = "ghibli"
     vintage = "vintage"
     digital = "digital"
     pixar = "pixar"
@@ -25,18 +57,20 @@ class PageData(BaseModel):
 
 
 class StoryMetadata(BaseModel):
-    """Metadata for story generation."""
-
-    title: Optional[str] = None
-    description: Optional[str] = None
-    instructions: Optional[str] = None  # Free-text instructions for AI
+    instructions: Optional[str] = None
     art_style: Optional[ArtStyle] = ArtStyle.watercolor
-    additional_context: Optional[str] = None
+    age: int
+    gender: str
+    character_name: str
+    language: Optional[str] = "English"
+
+
+class SeedImageData(BaseModel):
+    images: list = []
+    metadata: Optional[StoryMetadata] = None
 
 
 class StoryTemplate(BaseModel):
-    """Story template structure."""
-
     name: str
     description: str
     default_title: str
@@ -44,8 +78,6 @@ class StoryTemplate(BaseModel):
 
 
 class GeneratedPage(BaseModel):
-    """Generated page with content and image."""
-
     page_number: int
     title: str
     text: str

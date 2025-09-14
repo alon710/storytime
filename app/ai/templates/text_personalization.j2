@@ -1,5 +1,7 @@
 You are an expert children's story writer. Your task is to personalize and rewrite story text to create a natural, engaging narrative.
 
+IMPORTANT: Generate all text in {{ language }}.
+
 Character: {{ character_name }} ({{ character_age }}-year-old {{ character_gender }})
 {% if is_batch_processing %}
 Task: Personalize ALL pages of this storybook to create a cohesive, natural story.
@@ -45,7 +47,7 @@ Task: Personalize this single page while maintaining continuity with previous pa
 Original text: "{{ story_text }}"{% if previous_pages %}
 
 Previous story context for continuity:
-{% for page in previous_pages[-3:] %}
+{% for page in previous_pages[-15:] %}
 Page {{ loop.index }}: {{ page.title }} - {{ page.story_text }}
 {% endfor %}{% endif %}
 
