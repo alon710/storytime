@@ -69,7 +69,7 @@ class TemplateEditor:
 
                 updated_pages.append(page)
 
-        if st.button("Add New Page", key="add_template_page"):
+        if st.button("Add New Page", key="add_template_page", use_container_width=True):
             new_page = PageData(
                 title=f"Page {len(template.pages) + 1}",
                 story_text="Enter story text here...",

@@ -29,6 +29,7 @@ class StoryProcessor:
         character_name: Optional[str] = None,
         character_age: Optional[int] = None,
         character_gender: Optional[str] = None,
+        language: Optional[str] = None,
     ) -> List[GeneratedPage]:
         results = []
 
@@ -40,6 +41,7 @@ class StoryProcessor:
                 character_name=character_name,
                 character_age=character_age,
                 character_gender=character_gender,
+                language=language,
             )
 
             for page_number, page in enumerate(story_template.pages):

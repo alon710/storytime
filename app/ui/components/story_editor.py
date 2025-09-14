@@ -45,16 +45,24 @@ class StoryEditor:
 
                 updated_pages.append(page)
 
-        if st.button("Add New Page", width="stretch"):
-            new_page_number = len(generated_pages) + 1
-            new_page = GeneratedPage(
-                page_number=new_page_number,
-                title=f"New Page {new_page_number}",
-                text="Enter your story text here...",
-                illustration_prompt="Describe the illustration for this page",
-                image_path=None,
-            )
-            generated_pages.append(new_page)
-            st.rerun()
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.button("Add New Page", use_container_width=True):
+                new_page_number = len(generated_pages) + 1
+                new_page = GeneratedPage(
+                    page_number=new_page_number,
+                    title=f"New Page {new_page_number}",
+                    text="Enter your story text here...",
+                    illustration_prompt="Describe the illustration for this page",
+                    image_path=None,
+                )
+                generated_pages.append(new_page)
+                st.rerun()
+
+        with col2:
+            if st.button("💾 Save All Changes", use_container_width=True, type="primary"):
+                st.success("Changes saved!", icon="✅")
+                st.rerun()
 
         return updated_pages

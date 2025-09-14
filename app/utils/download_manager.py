@@ -42,6 +42,7 @@ class DownloadManager:
         character_name: Optional[str] = None,
         character_age: Optional[int] = None,
         character_gender: Optional[str] = None,
+        language: Optional[str] = None,
         metadata: Optional[StoryMetadata] = None,
         template: Optional[StoryTemplate] = None,
         system_prompt: Optional[str] = None,
@@ -50,6 +51,7 @@ class DownloadManager:
         metadata_dict = {
             "story_title": story_title,
             "total_pages": len(pages),
+            "language": language or (metadata.language if metadata else "English"),
             "character": {
                 "name": character_name or (metadata.character_name if metadata else "Unknown"),
                 "age": character_age or (metadata.age if metadata else None),
@@ -88,6 +90,7 @@ class DownloadManager:
         character_name: Optional[str] = None,
         character_age: Optional[int] = None,
         character_gender: Optional[str] = None,
+        language: Optional[str] = None,
         metadata: Optional[StoryMetadata] = None,
         template: Optional[StoryTemplate] = None,
         system_prompt: Optional[str] = None,
@@ -114,6 +117,7 @@ class DownloadManager:
                     character_name=character_name,
                     character_age=character_age,
                     character_gender=character_gender,
+                    language=language,
                     metadata=metadata,
                     template=template,
                     system_prompt=system_prompt,

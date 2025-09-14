@@ -33,6 +33,7 @@ class TextProcessor(BaseAIGenerator):
         character_name: Optional[str] = None,
         character_age: Optional[int] = None,
         character_gender: Optional[str] = None,
+        language: Optional[str] = None,
     ) -> Dict[int, str]:
         """Process story pages using text_personalization.j2 template for better narrative flow.
 
@@ -69,6 +70,7 @@ class TextProcessor(BaseAIGenerator):
                 character_name=character_name or "Hero",
                 character_age=character_age or 5,
                 character_gender=character_gender or "child",
+                language=language or "English",
                 is_batch_processing=True,
                 pages_data=pages_with_context,
             )

@@ -14,7 +14,7 @@ from app.ui.components.seed_image_uploader import SeedImageUploader
 from app.ui.components.template_editor import TemplateEditor
 from app.ui.components.story_editor import StoryEditor
 from app.ai.story_processor import StoryProcessor
-from app.utils.schemas import Gender, StoryTemplate, SessionStateKeys
+from app.utils.schemas import Gender, Language, StoryTemplate, SessionStateKeys
 from app.utils.download_manager import DownloadManager
 
 
@@ -125,6 +125,9 @@ def render_generation_step() -> None:
                     character_gender = st.session_state.get(
                         SessionStateKeys.CHAR_GENDER, Gender.boy
                     )
+                    language = st.session_state.get(
+                        SessionStateKeys.LANGUAGE, Language.english
+                    )
 
                     generated_pages = processor.generate_story(
                         story_template=st.session_state[
@@ -136,6 +139,7 @@ def render_generation_step() -> None:
                         character_name=character_name,
                         character_age=character_age,
                         character_gender=character_gender,
+                        language=language,
                     )
 
                     if generated_pages:
@@ -177,6 +181,7 @@ def render_generation_step() -> None:
                 character_name=st.session_state.get(SessionStateKeys.CHAR_NAME),
                 character_age=st.session_state.get(SessionStateKeys.CHAR_AGE),
                 character_gender=st.session_state.get(SessionStateKeys.CHAR_GENDER),
+                language=st.session_state.get(SessionStateKeys.LANGUAGE),
                 metadata=st.session_state.get(SessionStateKeys.METADATA),
                 template=st.session_state.get(SessionStateKeys.EDITED_TEMPLATE),
                 system_prompt=st.session_state.get(SessionStateKeys.SYSTEM_PROMPT),

@@ -5,7 +5,7 @@ from google import genai
 from app.utils.schemas import StoryMetadata, ArtStyle, SessionStateKeys, SeedImageData
 from app.utils.settings import settings
 from app.ai.image_generator import ImageGenerator
-from app.utils.schemas import Gender, ReferenceMethod
+from app.utils.schemas import Gender, Language, ReferenceMethod
 
 
 class SeedImageUploader:
@@ -61,6 +61,14 @@ class SeedImageUploader:
                 options=[style.value for style in ArtStyle],
                 index=0,
                 key=SessionStateKeys.ART_STYLE,
+            )
+
+        (col3,) = st.columns(1)
+        with col3:
+            language = st.selectbox(
+                "Language",
+                options=[lang.value for lang in Language],
+                key=SessionStateKeys.LANGUAGE,
             )
 
         system_prompt = st.text_area(
@@ -149,6 +157,7 @@ class SeedImageUploader:
             character_name=character_name if character_name else "Hero",
             age=character_age,
             gender=Gender(character_gender),
+            language=language,
         )
 
         final_reference = None

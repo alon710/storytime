@@ -13,6 +13,7 @@ class SessionStateKeys:
     CHAR_NAME = "char_name"
     CHAR_AGE = "char_age"
     CHAR_GENDER = "char_gender"
+    LANGUAGE = "language"
     GENERATED_CHARACTER_REF = "generated_character_ref"
     UPLOADED_REFERENCE = "uploaded_reference"
     ART_STYLE = "art_style"
@@ -22,6 +23,11 @@ class SessionStateKeys:
 class Gender(str, Enum):
     boy = "Boy"
     girl = "Girl"
+
+
+class Language(str, Enum):
+    english = "English"
+    hebrew = "Hebrew"
 
 
 class ReferenceMethod(str, Enum):
@@ -56,6 +62,7 @@ class StoryMetadata(BaseModel):
     age: int
     gender: str
     character_name: str
+    language: Optional[str] = "English"
 
 
 class SeedImageData(BaseModel):
