@@ -141,27 +141,24 @@ class ImageGenerator(BaseAIGenerator):
                     except Exception as e:
                         logger.warning(f"Failed to open previous image: {e}")
 
-            # Extract character info from session state or defaults
-            # We can access this from streamlit session state if needed
+            # Extract character info from metadata or use defaults
             character_name = "Hero"
             character_age = 5
             character_gender = "child"
 
-            # Try to extract from system prompt if available
-            if metadata and metadata.instructions:
-                # Simple extraction from instructions
-                instructions_lower = metadata.instructions.lower()
-                if "boy" in instructions_lower:
-                    character_gender = "boy"
-                elif "girl" in instructions_lower:
-                    character_gender = "girl"
+            if metadata:
+                # Use metadata properties directly
+                character_name = getattr(metadata, 'character_name', character_name)
+                character_age = getattr(metadata, 'age', character_age)
 
-                # Try to extract age if mentioned
-                import re
-
-                age_match = re.search(r"(\d+)[\s-]?year", instructions_lower)
-                if age_match:
-                    character_age = int(age_match.group(1))
+                # Handle gender enum
+                if hasattr(metadata, 'gender'):
+                    gender_value = metadata.gender
+                    # If it's an enum, get its value
+                    if hasattr(gender_value, 'value'):
+                        character_gender = gender_value.value
+                    else:
+                        character_gender = str(gender_value)
 
             # Get art style description if metadata contains art style
             art_style_description = None

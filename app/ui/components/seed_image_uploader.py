@@ -113,7 +113,7 @@ class SeedImageUploader:
                     else "Generate Character Reference"
                 )
 
-                if st.button(button_text, type="primary", width="stretch"):
+                if st.button(button_text, width="stretch"):
                     with st.spinner("Generating character reference..."):
                         try:
                             client = genai.Client(api_key=settings.google_api_key)
@@ -151,13 +151,17 @@ class SeedImageUploader:
                 st.divider()
                 st.image(st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF])
 
+        # Store system prompt in session state for later use
+        if system_prompt:
+            st.session_state[SessionStateKeys.SYSTEM_PROMPT] = system_prompt
+
         metadata = StoryMetadata(
             instructions=system_prompt if system_prompt else None,
             art_style=ArtStyle(art_style),
             character_name=character_name if character_name else "Hero",
             age=character_age,
             gender=Gender(character_gender),
-            language=language,
+            language=Language(language),
         )
 
         final_reference = None

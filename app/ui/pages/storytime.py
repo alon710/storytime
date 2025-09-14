@@ -102,57 +102,54 @@ def render_story_template_step() -> None:
 
 
 def render_generation_step() -> None:
-    st.header("Step 3: Generate and Edit Story")
-    (col1,) = st.columns(1)
+    if st.button("Generate Story", width="stretch"):
+        with st.spinner("Generating your story..."):
+            try:
+                processor = StoryProcessor()
+                character_name = st.session_state.get(
+                    SessionStateKeys.CHAR_NAME, "Hero"
+                )
+                character_age = st.session_state.get(SessionStateKeys.CHAR_AGE, 5)
+                character_gender = st.session_state.get(
+                    SessionStateKeys.CHAR_GENDER, Gender.boy
+                )
+                language = st.session_state.get(
+                    SessionStateKeys.LANGUAGE, Language.english
+                )
 
-    with col1:
-        system_prompt = st.text_area(
-            "System Prompt (Optional)",
-            value=st.session_state[SessionStateKeys.SYSTEM_PROMPT],
-            height=100,
-            help="Additional instructions for the AI generation process",
-        )
-        st.session_state[SessionStateKeys.SYSTEM_PROMPT] = system_prompt
+                # Update metadata with latest character properties
+                metadata = st.session_state.get(SessionStateKeys.METADATA)
+                if metadata:
+                    metadata.character_name = character_name
+                    metadata.age = character_age
+                    metadata.gender = character_gender
+                    metadata.language = language
 
-        if st.button("Generate Story", type="primary", width="stretch"):
-            with st.spinner("Generating your story..."):
-                try:
-                    processor = StoryProcessor()
-                    character_name = st.session_state.get(
-                        SessionStateKeys.CHAR_NAME, "Hero"
-                    )
-                    character_age = st.session_state.get(SessionStateKeys.CHAR_AGE, 5)
-                    character_gender = st.session_state.get(
-                        SessionStateKeys.CHAR_GENDER, Gender.boy
-                    )
-                    language = st.session_state.get(
-                        SessionStateKeys.LANGUAGE, Language.english
-                    )
+                # Get system prompt from seed image step if available
+                system_prompt = st.session_state.get(SessionStateKeys.SYSTEM_PROMPT)
+                if not system_prompt:
+                    system_prompt = st.session_state.get(SessionStateKeys.SYSTEM_PROMPT_SEED, "")
 
-                    generated_pages = processor.generate_story(
-                        story_template=st.session_state[
-                            SessionStateKeys.EDITED_TEMPLATE
-                        ],
-                        seed_images=st.session_state[SessionStateKeys.SEED_IMAGES],
-                        metadata=st.session_state[SessionStateKeys.METADATA],
-                        system_prompt=system_prompt,
-                        character_name=character_name,
-                        character_age=character_age,
-                        character_gender=character_gender,
-                        language=language,
-                    )
+                generated_pages = processor.generate_story(
+                    story_template=st.session_state[SessionStateKeys.EDITED_TEMPLATE],
+                    seed_images=st.session_state[SessionStateKeys.SEED_IMAGES],
+                    metadata=metadata,
+                    system_prompt=system_prompt,
+                    character_name=character_name,
+                    character_age=character_age,
+                    character_gender=character_gender,
+                    language=language,
+                )
 
-                    if generated_pages:
-                        st.session_state[SessionStateKeys.GENERATED_PAGES] = (
-                            generated_pages
-                        )
-                        st.success("Story generated successfully!")
-                        st.rerun()
-                    else:
-                        st.error("Failed to generate story. Please try again.")
+                if generated_pages:
+                    st.session_state[SessionStateKeys.GENERATED_PAGES] = generated_pages
+                    st.success("Story generated successfully!")
+                    st.rerun()
+                else:
+                    st.error("Failed to generate story. Please try again.")
 
-                except Exception as e:
-                    st.error(f"Error generating story: {str(e)}")
+            except Exception as e:
+                st.error(f"Error generating story: {str(e)}")
 
     if st.session_state[SessionStateKeys.GENERATED_PAGES]:
         st.divider()

@@ -61,8 +61,10 @@ class StoryEditor:
                 st.rerun()
 
         with col2:
-            if st.button("💾 Save All Changes", use_container_width=True, type="primary"):
-                st.success("Changes saved!", icon="✅")
+            if st.button(
+                "Save All Changes",
+                use_container_width=True,
+            ):
                 st.rerun()
 
         return updated_pages

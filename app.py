@@ -9,7 +9,6 @@ st.set_page_config(
 )
 
 st.title("StoryTime")
-st.caption("AI-Powered Story Generator")
 st.divider()
 
 
