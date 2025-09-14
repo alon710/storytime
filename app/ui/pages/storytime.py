@@ -15,6 +15,7 @@ from app.ui.components.template_editor import TemplateEditor
 from app.ui.components.story_editor import StoryEditor
 from app.ai.story_processor import StoryProcessor
 from app.utils.schemas import Gender, StoryTemplate, SessionStateKeys
+from app.utils.download_manager import DownloadManager
 
 
 def initialize_session_state() -> None:
@@ -156,9 +157,40 @@ def render_generation_step() -> None:
         )
         st.session_state[SessionStateKeys.GENERATED_PAGES] = updated_pages
 
-        if st.button("Regenerate Story", width="stretch"):
-            st.session_state[SessionStateKeys.GENERATED_PAGES] = []
-            st.rerun()
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.button("Regenerate Story", use_container_width=True):
+                st.session_state[SessionStateKeys.GENERATED_PAGES] = []
+                st.rerun()
+
+        with col2:
+            story_title = (
+                st.session_state[SessionStateKeys.EDITED_TEMPLATE].default_title
+                if st.session_state.get(SessionStateKeys.EDITED_TEMPLATE)
+                else "Story"
+            )
+
+            zip_path = DownloadManager.create_archive(
+                pages=st.session_state[SessionStateKeys.GENERATED_PAGES],
+                story_title=story_title,
+                character_name=st.session_state.get(SessionStateKeys.CHAR_NAME),
+                character_age=st.session_state.get(SessionStateKeys.CHAR_AGE),
+                character_gender=st.session_state.get(SessionStateKeys.CHAR_GENDER),
+                metadata=st.session_state.get(SessionStateKeys.METADATA),
+                template=st.session_state.get(SessionStateKeys.EDITED_TEMPLATE),
+                system_prompt=st.session_state.get(SessionStateKeys.SYSTEM_PROMPT),
+            )
+
+            if zip_path:
+                with open(zip_path, "rb") as f:
+                    st.download_button(
+                        label="Download Story Archive",
+                        data=f.read(),
+                        file_name=f"{DownloadManager.sanitize_filename(story_title)}.zip",
+                        mime="application/zip",
+                        use_container_width=True,
+                    )
 
 
 def main() -> None:
