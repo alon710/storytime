@@ -4,10 +4,10 @@ LEFT SIDE: Front-facing view (looking directly at camera/viewer)
 RIGHT SIDE: Side profile view (facing to the right)
 
 System Prompt: {{ system_prompt }}
-Art style: {% if art_style == 'watercolor' %}soft watercolor painting style, gentle brush strokes, flowing colors, artistic paper texture{% elif art_style == 'cartoon' %}bright cartoon style, clean lines, vibrant colors, friendly and approachable{% elif art_style == 'ghibli' %}Studio Ghibli anime style, soft cel animation, beautiful detailed eyes, magical atmosphere{% elif art_style == 'digital' %}clean digital art style, smooth shading, modern illustration, crisp details{% elif art_style == 'pixar' %}Pixar 3D animation style, expressive features, warm lighting, high-quality rendering{% else %}bright cartoon style, clean lines, vibrant colors, friendly and approachable{% endif %}
+Art style: {{ art_style_description }}
+Character Name: {{ character_name }}
 
 REQUIREMENTS:
-- {{ reference_note }} of the {{ gender }} - use all photos to capture the {{ gender }}'s appearance, features, and characteristics
 - Synthesize features from all reference images to create a consistent character design
 - Both poses should be consistent - same clothing, hair, and features
 - Clear split composition with both poses in the same image
@@ -15,7 +15,7 @@ REQUIREMENTS:
 - Child-friendly, warm, and welcoming style
 - Both poses should be full body or at least torso up
 - Maintain consistent proportions between both poses
-- Apply the {{ art_style }} style uniformly to both poses
+- Apply the specified art style uniformly to both poses
 - Clean white or simple background
 
 COMPOSITION:
@@ -24,3 +24,10 @@ COMPOSITION:
 - Right pose: Side profile view
 - Both poses should be clearly visible and well-proportioned
 - Consistent lighting and art style across both poses
+
+IMPORTANT: The character is {{ character_age }} years old. Ensure the character's appearance, proportions, and features clearly reflect a {{ character_age }}-year-old {{ gender }}.
+
+IMAGE SIZE REQUIREMENTS:
+- Generate image in SQUARE format (1:1 aspect ratio)
+- Target dimensions: 800x800 pixels
+- Maintain consistent square size across all generated images

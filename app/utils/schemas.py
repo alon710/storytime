@@ -30,9 +30,9 @@ class ReferenceMethod(str, Enum):
 
 
 class ArtStyle(str, Enum):
+    ghibli = "ghibli"
     watercolor = "watercolor"
     cartoon = "cartoon"
-    ghibli = "ghibli"
     vintage = "vintage"
     digital = "digital"
     pixar = "pixar"

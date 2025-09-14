@@ -1,5 +1,9 @@
 Generate a storybook style children's book illustration without text.
-
+{% if system_prompt %}
+System Prompt: {{ system_prompt }}
+{% endif %}{% if art_style_description %}
+Art style: {{ art_style_description }}
+{% endif %}
 Page: "{{ page_title }}"
 Character: {{ character_name }} ({{ character_age }}-year-old {{ character_gender }})
 Character reference: I have provided {{ num_character_images }} reference photo(s) of {{ character_name }}. Use all photos to capture the child's appearance, features, and characteristics accurately.

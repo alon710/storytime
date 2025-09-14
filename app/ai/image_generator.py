@@ -1,5 +1,3 @@
-"""Image generation component for StoryTime application."""
-
 import io
 from typing import Optional, List
 from PIL import Image
@@ -8,12 +6,17 @@ from app.utils.logger import logger
 from app.ai.base import BaseAIGenerator
 from app.utils.schemas import ArtStyle, Gender, StoryMetadata, Suffix
 from app.utils.temp_file import save_image_to_temp
-
-from PIL import Image as PILImage
+from google.genai import types
 
 
 class ImageGenerator(BaseAIGenerator):
-    """AI-powered image generator for story illustrations."""
+    ART_STYLE_DESCRIPTIONS = {
+        ArtStyle.watercolor: "soft watercolor painting style, gentle brush strokes, flowing colors, artistic paper texture",
+        ArtStyle.cartoon: "bright cartoon style, clean lines, vibrant colors, friendly and approachable",
+        ArtStyle.ghibli: "Studio Ghibli anime style, soft cel animation, beautiful detailed eyes, magical atmosphere",
+        ArtStyle.digital: "clean digital art style, smooth shading, modern illustration, crisp details",
+        ArtStyle.pixar: "Pixar 3D animation style, expressive features, warm lighting, high-quality rendering",
+    }
 
     def __init__(self, client: genai.Client, model: str):
         super().__init__(client, model)
@@ -28,31 +31,19 @@ class ImageGenerator(BaseAIGenerator):
         art_style: ArtStyle,
     ) -> Optional[str]:
         try:
-            image_inputs = []
-            for img in character_images:
-                image_inputs.append(PILImage.open(img))
+            image_inputs = [Image.open(fp=img) for img in character_images]
+            art_style_description = self.ART_STYLE_DESCRIPTIONS[art_style]
 
-            # Build prompt using the character generation template
             template = self.env.get_template("character_generation.j2")
             prompt = template.render(
                 gender=character_gender,
+                character_age=character_age,
+                character_name=character_name,
                 system_prompt=system_prompt,
-                art_style=art_style,
-                reference_note=f"Based on the {len(image_inputs)} uploaded photos of a {character_age} year old {character_gender}",
+                art_style_description=art_style_description,
             )
 
-            # Add character age emphasis and size requirements to prompt
-            prompt += f"\n\nIMPORTANT: The character is {character_age} years old. Ensure the character's appearance, proportions, and features clearly reflect a {character_age}-year-old {character_gender}.\n"
-            prompt += "\n\nIMAGE SIZE REQUIREMENTS:\n"
-            prompt += "- Generate image in SQUARE format (1:1 aspect ratio)\n"
-            prompt += "- Target dimensions: 800x800 pixels\n"
-            prompt += "- Maintain consistent square size across all generated images\n"
-
-            # Prepare contents for generation
             contents = [prompt] + image_inputs
-
-            # Generate character reference with specific generation config
-            from google.genai import types
 
             generation_config = types.GenerateContentConfig(
                 temperature=0.4,
@@ -64,42 +55,29 @@ class ImageGenerator(BaseAIGenerator):
 
             response = self._generate_content(contents, config=generation_config)
 
-            if not response or not response.candidates:
-                logger.warning("No response from AI for character reference generation")
-                return None
-
-            # Extract generated image
             for part in response.candidates[0].content.parts:
                 if part.inline_data is not None:
                     image_data = part.inline_data.data
-                    generated_image = PILImage.open(io.BytesIO(image_data))
-
-                    # Resize to consistent square dimensions
+                    generated_image = Image.open(io.BytesIO(initial_bytes=image_data))
                     target_size = 800
-
-                    # Resize image to consistent size while maintaining aspect ratio
                     generated_image.thumbnail(
-                        (target_size, target_size), PILImage.Resampling.LANCZOS
+                        (target_size, target_size),
+                        Image.Resampling.LANCZOS,
+                    )
+                    final_image = Image.new(
+                        "RGB",
+                        (target_size, target_size),
+                        (255, 255, 255),
                     )
 
-                    # Create new square image with exact dimensions and paste resized image
-                    final_image = PILImage.new(
-                        "RGB", (target_size, target_size), (255, 255, 255)
-                    )
-
-                    # Center the resized image
                     x = (target_size - generated_image.width) // 2
                     y = (target_size - generated_image.height) // 2
                     final_image.paste(generated_image, (x, y))
 
-                    # Save to temporary file
                     if temp_path := save_image_to_temp(
                         image=final_image,
                         suffix=Suffix.png,
                     ):
-                        logger.info(
-                            f"Successfully generated character reference for {character_name} (size: {target_size}x{target_size})"
-                        )
                         return temp_path
 
             logger.warning("No image found in AI response")
@@ -185,6 +163,13 @@ class ImageGenerator(BaseAIGenerator):
                 if age_match:
                     character_age = int(age_match.group(1))
 
+            # Get art style description if metadata contains art style
+            art_style_description = None
+            if metadata and hasattr(metadata, "art_style"):
+                art_style_description = self.ART_STYLE_DESCRIPTIONS.get(
+                    metadata.art_style
+                )
+
             # Use the image_generation.j2 template
             template = self.env.get_template("image_generation.j2")
             prompt = template.render(
@@ -197,11 +182,9 @@ class ImageGenerator(BaseAIGenerator):
                 story_text=story_text,
                 previous_pages=previous_pages,
                 num_previous_images=len(context_images),
+                system_prompt=system_prompt,
+                art_style_description=art_style_description,
             )
-
-            # Add any additional system instructions
-            if system_prompt:
-                prompt = f"{system_prompt}\n\n{prompt}"
 
             # Prepare contents: prompt + character reference + previous images for context
             contents = [prompt] + character_images + context_images
