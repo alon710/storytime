@@ -151,7 +151,6 @@ class SeedImageUploader:
                 st.divider()
                 st.image(st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF])
 
-        # Store system prompt in session state for later use
         if system_prompt:
             st.session_state[SessionStateKeys.SYSTEM_PROMPT] = system_prompt
 
