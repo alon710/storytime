@@ -18,18 +18,9 @@ class StoryEditor:
 
         for i, page in enumerate(generated_pages):
             with st.container():
-                header_col1, header_col2 = st.columns([10, 1])
+                (header_col1, _) = st.columns([10, 1])
                 with header_col1:
                     st.write(f"**Page {page.page_number}: {page.title}**")
-                with header_col2:
-                    if st.button("✕", key=f"remove_page_{i}", help="Remove this page"):
-                        filtered_pages = [
-                            p for j, p in enumerate(generated_pages) if j != i
-                        ]
-
-                        for idx, p in enumerate(filtered_pages):
-                            p.page_number = idx + 1
-                        return filtered_pages
 
                 img_col, text_col = st.columns([1, 1])
 

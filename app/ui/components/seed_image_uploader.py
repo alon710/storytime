@@ -136,11 +136,7 @@ class SeedImageUploader:
                 st.session_state.generated_character_ref
             ):
                 st.divider()
-                st.write("**Generated Character Reference:**")
                 st.image(st.session_state.generated_character_ref)
-                st.info(
-                    "You can regenerate with different parameters or continue to the next step."
-                )
 
         # Prepare metadata
         metadata = StoryMetadata(
