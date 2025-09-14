@@ -117,6 +117,12 @@ def render_generation_step() -> None:
                     SessionStateKeys.LANGUAGE, Language.english
                 )
 
+                # Extract enum values as strings
+                if hasattr(character_gender, 'value'):
+                    character_gender = character_gender.value
+                if hasattr(language, 'value'):
+                    language = language.value
+
                 # Update metadata with latest character properties
                 metadata = st.session_state.get(SessionStateKeys.METADATA)
                 if metadata:

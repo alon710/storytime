@@ -139,6 +139,7 @@ class TextProcessor(BaseAIGenerator):
                     character_name,
                     character_age,
                     character_gender,
+                    language,
                     system_prompt,
                 )
 
@@ -154,6 +155,7 @@ class TextProcessor(BaseAIGenerator):
         character_name: str,
         character_age: int,
         character_gender: str,
+        language: str,
         system_prompt: Optional[str] = None,
     ) -> Dict[int, str]:
         """Fallback method to process pages individually with context."""
@@ -168,6 +170,7 @@ class TextProcessor(BaseAIGenerator):
                     character_name=character_name,
                     character_age=character_age,
                     character_gender=character_gender,
+                    language=language,
                     is_batch_processing=False,
                     story_text=page.story_text,
                     previous_pages=previous_pages,  # Pass all previous pages for context
