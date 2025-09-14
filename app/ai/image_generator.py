@@ -6,8 +6,10 @@ from PIL import Image
 from google import genai
 from app.utils.logger import logger
 from app.ai.base import BaseAIGenerator
-from app.utils.schemas import StoryMetadata, Suffix
+from app.utils.schemas import ArtStyle, Gender, StoryMetadata, Suffix
 from app.utils.temp_file import save_image_to_temp
+
+from PIL import Image as PILImage
 
 
 class ImageGenerator(BaseAIGenerator):
@@ -21,41 +23,22 @@ class ImageGenerator(BaseAIGenerator):
         character_images,
         character_name: str,
         character_age: int,
-        character_gender: str,
-        character_info: str,
-        art_style: str
+        character_gender: Gender,
+        system_prompt: str,
+        art_style: ArtStyle,
     ) -> Optional[str]:
-        """Generate character reference sheet from uploaded photos.
-
-        Args:
-            character_images: Uploaded character photos
-            character_name: Name of the character
-            character_age: Age of the character
-            character_gender: Gender (boy/girl)
-            character_info: Description of the character
-            art_style: Art style to apply
-
-        Returns:
-            Path to generated character reference image, or None on failure
-        """
         try:
-            # Prepare images
-            from PIL import Image as PILImage
             image_inputs = []
             for img in character_images:
                 image_inputs.append(PILImage.open(img))
-
-            # Include age in character info if not already present
-            if str(character_age) not in character_info:
-                character_info = f"{character_age} year old {character_info}"
 
             # Build prompt using the character generation template
             template = self.env.get_template("character_generation.j2")
             prompt = template.render(
                 gender=character_gender,
-                character_info=character_info,
+                system_prompt=system_prompt,
                 art_style=art_style,
-                reference_note=f"Based on the {len(image_inputs)} uploaded photos of a {character_age} year old {character_gender}"
+                reference_note=f"Based on the {len(image_inputs)} uploaded photos of a {character_age} year old {character_gender}",
             )
 
             # Add character age emphasis and size requirements to prompt
@@ -70,12 +53,13 @@ class ImageGenerator(BaseAIGenerator):
 
             # Generate character reference with specific generation config
             from google.genai import types
+
             generation_config = types.GenerateContentConfig(
                 temperature=0.4,
                 top_p=1,
                 top_k=32,
                 max_output_tokens=8192,
-                response_modalities=["Text", "Image"]
+                response_modalities=["Text", "Image"],
             )
 
             response = self._generate_content(contents, config=generation_config)
@@ -94,10 +78,14 @@ class ImageGenerator(BaseAIGenerator):
                     target_size = 800
 
                     # Resize image to consistent size while maintaining aspect ratio
-                    generated_image.thumbnail((target_size, target_size), PILImage.Resampling.LANCZOS)
+                    generated_image.thumbnail(
+                        (target_size, target_size), PILImage.Resampling.LANCZOS
+                    )
 
                     # Create new square image with exact dimensions and paste resized image
-                    final_image = PILImage.new('RGB', (target_size, target_size), (255, 255, 255))
+                    final_image = PILImage.new(
+                        "RGB", (target_size, target_size), (255, 255, 255)
+                    )
 
                     # Center the resized image
                     x = (target_size - generated_image.width) // 2
@@ -109,7 +97,9 @@ class ImageGenerator(BaseAIGenerator):
                         image=final_image,
                         suffix=Suffix.png,
                     ):
-                        logger.info(f"Successfully generated character reference for {character_name} (size: {target_size}x{target_size})")
+                        logger.info(
+                            f"Successfully generated character reference for {character_name} (size: {target_size}x{target_size})"
+                        )
                         return temp_path
 
             logger.warning("No image found in AI response")
@@ -162,7 +152,11 @@ class ImageGenerator(BaseAIGenerator):
             context_images = []
             if previous_images:
                 # Take up to 5 most recent images for context
-                recent_images = previous_images[-5:] if len(previous_images) > 5 else previous_images
+                recent_images = (
+                    previous_images[-5:]
+                    if len(previous_images) > 5
+                    else previous_images
+                )
                 for img_path in recent_images:
                     try:
                         context_images.append(Image.open(img_path))
@@ -186,7 +180,8 @@ class ImageGenerator(BaseAIGenerator):
 
                 # Try to extract age if mentioned
                 import re
-                age_match = re.search(r'(\d+)[\s-]?year', instructions_lower)
+
+                age_match = re.search(r"(\d+)[\s-]?year", instructions_lower)
                 if age_match:
                     character_age = int(age_match.group(1))
 
@@ -201,7 +196,7 @@ class ImageGenerator(BaseAIGenerator):
                 illustration_prompt=illustration_prompt,
                 story_text=story_text,
                 previous_pages=previous_pages,
-                num_previous_images=len(context_images)
+                num_previous_images=len(context_images),
             )
 
             # Add any additional system instructions
@@ -213,12 +208,13 @@ class ImageGenerator(BaseAIGenerator):
 
             # Generate image with specific generation config for consistency
             from google.genai import types
+
             generation_config = types.GenerateContentConfig(
                 temperature=0.4,
                 top_p=1,
                 top_k=32,
                 max_output_tokens=8192,
-                response_modalities=["Text", "Image"]
+                response_modalities=["Text", "Image"],
             )
 
             response = self._generate_content(contents, config=generation_config)
@@ -237,10 +233,14 @@ class ImageGenerator(BaseAIGenerator):
                     target_size = 800
 
                     # Resize image to consistent size while maintaining aspect ratio
-                    generated_image.thumbnail((target_size, target_size), Image.Resampling.LANCZOS)
+                    generated_image.thumbnail(
+                        (target_size, target_size), Image.Resampling.LANCZOS
+                    )
 
                     # Create new square image with exact dimensions and paste resized image
-                    final_image = Image.new('RGB', (target_size, target_size), (255, 255, 255))
+                    final_image = Image.new(
+                        "RGB", (target_size, target_size), (255, 255, 255)
+                    )
 
                     # Center the resized image
                     x = (target_size - generated_image.width) // 2
@@ -252,7 +252,9 @@ class ImageGenerator(BaseAIGenerator):
                         image=final_image,
                         suffix=Suffix.png,
                     ):
-                        logger.info(f"Successfully generated image for page: {page_title} (size: {target_size}x{target_size})")
+                        logger.info(
+                            f"Successfully generated image for page: {page_title} (size: {target_size}x{target_size})"
+                        )
                         return temp_path
 
             logger.warning("No image found in AI response")

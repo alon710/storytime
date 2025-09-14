@@ -61,7 +61,7 @@ class TextProcessor(BaseAIGenerator):
                     "page_index": idx + 1,
                     "total_pages": len(pages),
                     "is_first": idx == 0,
-                    "is_last": idx == len(pages) - 1
+                    "is_last": idx == len(pages) - 1,
                 }
                 pages_with_context.append(page_dict)
 

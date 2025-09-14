@@ -14,7 +14,7 @@ from app.ui.components.seed_image_uploader import SeedImageUploader
 from app.ui.components.template_editor import TemplateEditor
 from app.ui.components.story_editor import StoryEditor
 from app.ai.story_processor import StoryProcessor
-from app.utils.schemas import StoryTemplate, SessionStateKeys
+from app.utils.schemas import Gender, StoryTemplate, SessionStateKeys
 
 
 def initialize_session_state() -> None:
@@ -100,13 +100,7 @@ def render_story_template_step() -> None:
 
 
 def render_generation_step() -> None:
-    """Render Step 3: Story generation and editing."""
     st.header("Step 3: Generate and Edit Story")
-
-    if not st.session_state[SessionStateKeys.EDITED_TEMPLATE]:
-        st.warning("Please select and edit a story template first.")
-        return
-
     (col1,) = st.columns(1)
 
     with col1:
@@ -122,13 +116,12 @@ def render_generation_step() -> None:
             with st.spinner("Generating your story..."):
                 try:
                     processor = StoryProcessor()
-                    # Try to get from widget keys
                     character_name = st.session_state.get(
                         SessionStateKeys.CHAR_NAME, "Hero"
                     )
                     character_age = st.session_state.get(SessionStateKeys.CHAR_AGE, 5)
                     character_gender = st.session_state.get(
-                        SessionStateKeys.CHAR_GENDER, "child"
+                        SessionStateKeys.CHAR_GENDER, Gender.boy
                     )
 
                     generated_pages = processor.generate_story(

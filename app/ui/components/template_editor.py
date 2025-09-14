@@ -39,13 +39,11 @@ class TemplateEditor:
                         help="Remove this page",
                         type="tertiary",
                     ):
-                        # Skip this page and trigger rerun
                         template.pages = [
                             p for j, p in enumerate(template.pages) if j != i
                         ]
                         st.rerun()
 
-                # Edit page fields
                 page.title = st.text_input(
                     "Page Title", value=page.title, key=f"template_page_title_{i}"
                 )
@@ -71,7 +69,6 @@ class TemplateEditor:
 
                 updated_pages.append(page)
 
-        # Add new page button
         if st.button("Add New Page", key="add_template_page"):
             new_page = PageData(
                 title=f"Page {len(template.pages) + 1}",
@@ -81,7 +78,6 @@ class TemplateEditor:
             template.pages.append(new_page)
             st.rerun()
 
-        # Update template with current pages
         template.pages = updated_pages
 
         return template

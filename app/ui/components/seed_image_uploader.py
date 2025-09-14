@@ -116,10 +116,8 @@ class SeedImageUploader:
                                 character_name=character_name,
                                 character_age=character_age,
                                 character_gender=character_gender,
-                                character_info=system_prompt
-                                if system_prompt
-                                else f"{character_age} year old {character_gender}",
                                 art_style=art_style,
+                                system_prompt=system_prompt,
                             )
 
                             if image_path:
