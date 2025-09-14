@@ -23,10 +23,14 @@ class TemplateEditor:
         (col1,) = st.columns(1)
         with col1:
             template.default_title = st.text_input(
-                "Story Title", value=template.default_title, key="template_title"
+                "Story Title",
+                value=template.default_title,
+                key="template_title",
             )
             template.description = st.text_area(
-                "Description", value=template.description, key="template_description"
+                "Description",
+                value=template.description,
+                key="template_description",
             )
 
         st.divider()
