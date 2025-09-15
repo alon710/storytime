@@ -1,5 +1,5 @@
 import io
-from typing import Optional, List
+from typing import Optional
 from PIL import Image
 from google import genai
 from app.utils.logger import logger
@@ -92,11 +92,11 @@ class ImageGenerator(BaseAIGenerator):
         illustration_prompt: str,
         page_title: str,
         story_text: str = "",
-        seed_images: Optional[List] = None,
+        seed_images: Optional[list] = None,
         metadata: Optional[StoryMetadata] = None,
         system_prompt: Optional[str] = None,
-        previous_pages: Optional[List[dict]] = None,
-        previous_images: Optional[List[str]] = None,
+        previous_pages: Optional[list[dict]] = None,
+        previous_images: Optional[list[str]] = None,
     ) -> Optional[str]:
         """Generate illustration for a story page using image_generation.j2 template.
 
@@ -148,14 +148,14 @@ class ImageGenerator(BaseAIGenerator):
 
             if metadata:
                 # Use metadata properties directly
-                character_name = getattr(metadata, 'character_name', character_name)
-                character_age = getattr(metadata, 'age', character_age)
+                character_name = getattr(metadata, "character_name", character_name)
+                character_age = getattr(metadata, "age", character_age)
 
                 # Handle gender enum
-                if hasattr(metadata, 'gender'):
+                if hasattr(metadata, "gender"):
                     gender_value = metadata.gender
                     # If it's an enum, get its value
-                    if hasattr(gender_value, 'value'):
+                    if hasattr(gender_value, "value"):
                         character_gender = gender_value.value
                     else:
                         character_gender = str(gender_value)

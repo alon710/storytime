@@ -4,7 +4,7 @@ import json
 import os
 import tempfile
 import zipfile
-from typing import List, Optional
+from typing import Optional
 
 from app.utils.logger import logger
 from app.utils.schemas import GeneratedPage, StoryMetadata, StoryTemplate
@@ -12,7 +12,7 @@ from app.utils.schemas import GeneratedPage, StoryMetadata, StoryTemplate
 
 class DownloadManager:
     @staticmethod
-    def create_story_text(pages: List[GeneratedPage]) -> str:
+    def create_story_text(pages: list[GeneratedPage]) -> str:
         story_lines = []
 
         for page in pages:
@@ -26,7 +26,7 @@ class DownloadManager:
 
     @staticmethod
     def create_metadata_dict(
-        pages: List[GeneratedPage],
+        pages: list[GeneratedPage],
         story_title: str,
         metadata: StoryMetadata,
         template: Optional[StoryTemplate] = None,
@@ -66,7 +66,7 @@ class DownloadManager:
     @classmethod
     def create_archive(
         cls,
-        pages: List[GeneratedPage],
+        pages: list[GeneratedPage],
         story_title: str,
         metadata: StoryMetadata,
         template: Optional[StoryTemplate] = None,

@@ -1,7 +1,6 @@
 """Text processing component for StoryTime application using text_personalization.j2 template."""
 
 import json
-from typing import Optional, List, Dict
 from google import genai
 from google.genai import types
 from app.utils.logger import logger
@@ -27,13 +26,13 @@ class TextProcessor(BaseAIGenerator):
 
     def process_pages(
         self,
-        pages: List[PageData],
+        pages: list[PageData],
         metadata: StoryMetadata,
-    ) -> Dict[int, str]:
+    ) -> dict[int, str]:
         """Process story pages using text_personalization.j2 template for better narrative flow.
 
         Args:
-            pages: List of PageData objects with story content
+            pages: list of PageData objects with story content
             metadata: Story metadata with character information and instructions
 
         Returns:
@@ -138,9 +137,9 @@ class TextProcessor(BaseAIGenerator):
 
     def _process_pages_individually(
         self,
-        pages: List[PageData],
+        pages: list[PageData],
         metadata: StoryMetadata,
-    ) -> Dict[int, str]:
+    ) -> dict[int, str]:
         """Fallback method to process pages individually with context."""
         processed_texts = {}
         previous_pages = []
