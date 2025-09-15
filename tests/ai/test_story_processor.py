@@ -15,7 +15,8 @@ class TestStoryProcessor:
     def test_initialization(self, mock_genai_client_class, mock_settings):
         """Test StoryProcessor initialization."""
         mock_settings.google_api_key = "test-key"
-        mock_settings.model = "test-model"
+        mock_settings.story_image_model = "test-image-model"
+        mock_settings.story_text_model = "test-text-model"
         mock_client = MagicMock()
         mock_genai_client_class.return_value = mock_client
 
@@ -32,7 +33,8 @@ class TestStoryProcessor:
     ):
         """Test successful story generation."""
         mock_settings.google_api_key = "test-key"
-        mock_settings.model = "test-model"
+        mock_settings.story_image_model = "test-image-model"
+        mock_settings.story_text_model = "test-text-model"
 
         processor = StoryProcessor()
 
@@ -71,7 +73,8 @@ class TestStoryProcessor:
     ):
         """Test story generation without seed images."""
         mock_settings.google_api_key = "test-key"
-        mock_settings.model = "test-model"
+        mock_settings.story_image_model = "test-image-model"
+        mock_settings.story_text_model = "test-text-model"
 
         processor = StoryProcessor()
 
@@ -99,7 +102,8 @@ class TestStoryProcessor:
     ):
         """Test story generation when text processing fails."""
         mock_settings.google_api_key = "test-key"
-        mock_settings.model = "test-model"
+        mock_settings.story_image_model = "test-image-model"
+        mock_settings.story_text_model = "test-text-model"
 
         processor = StoryProcessor()
 
@@ -126,7 +130,8 @@ class TestStoryProcessor:
     ):
         """Test story generation when image generation fails."""
         mock_settings.google_api_key = "test-key"
-        mock_settings.model = "test-model"
+        mock_settings.story_image_model = "test-image-model"
+        mock_settings.story_text_model = "test-text-model"
 
         processor = StoryProcessor()
 
@@ -153,7 +158,8 @@ class TestStoryProcessor:
     ):
         """Test that previous pages context is passed correctly."""
         mock_settings.google_api_key = "test-key"
-        mock_settings.model = "test-model"
+        mock_settings.story_image_model = "test-image-model"
+        mock_settings.story_text_model = "test-text-model"
 
         processor = StoryProcessor()
 
@@ -187,7 +193,8 @@ class TestStoryProcessor:
     ):
         """Test exception handling during story generation."""
         mock_settings.google_api_key = "test-key"
-        mock_settings.model = "test-model"
+        mock_settings.story_image_model = "test-image-model"
+        mock_settings.story_text_model = "test-text-model"
 
         processor = StoryProcessor()
 
@@ -209,7 +216,8 @@ class TestStoryProcessor:
     ):
         """Test story generation with empty template."""
         mock_settings.google_api_key = "test-key"
-        mock_settings.model = "test-model"
+        mock_settings.story_image_model = "test-image-model"
+        mock_settings.story_text_model = "test-text-model"
 
         processor = StoryProcessor()
 
@@ -234,7 +242,8 @@ class TestStoryProcessor:
     ):
         """Test that pages are numbered correctly."""
         mock_settings.google_api_key = "test-key"
-        mock_settings.model = "test-model"
+        mock_settings.story_image_model = "test-image-model"
+        mock_settings.story_text_model = "test-text-model"
 
         processor = StoryProcessor()
 
@@ -257,7 +266,8 @@ class TestStoryProcessor:
     ):
         """Test that template data is preserved in generated pages."""
         mock_settings.google_api_key = "test-key"
-        mock_settings.model = "test-model"
+        mock_settings.story_image_model = "test-image-model"
+        mock_settings.story_text_model = "test-text-model"
 
         processor = StoryProcessor()
 
@@ -281,7 +291,8 @@ class TestStoryProcessor:
     ):
         """Test that appropriate logging occurs during story generation."""
         mock_settings.google_api_key = "test-key"
-        mock_settings.model = "test-model"
+        mock_settings.story_image_model = "test-image-model"
+        mock_settings.story_text_model = "test-text-model"
 
         processor = StoryProcessor()
 

@@ -15,10 +15,10 @@ from app.utils.logger import logger
 class StoryProcessor:
     def __init__(self):
         client = genai.Client(api_key=settings.google_api_key)
-        model = settings.model
 
-        self.image_generator = ImageGenerator(client=client, model=model)
-        self.text_processor = TextProcessor(client=client, model=model)
+        # Use specific models for each component
+        self.image_generator = ImageGenerator(client=client, model=settings.story_image_model)
+        self.text_processor = TextProcessor(client=client, model=settings.story_text_model)
 
     def generate_story(
         self,

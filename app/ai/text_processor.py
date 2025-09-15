@@ -69,12 +69,10 @@ class TextProcessor(BaseAIGenerator):
             if metadata.instructions:
                 prompt = f"{metadata.instructions}\n\n{prompt}"
 
-            # Use text-only model for JSON schema support
-            text_model = "gemini-2.0-flash-exp"
-
+            # Use the configured model for text processing
             # Generate personalized text with JSON schema
             response = self.client.models.generate_content(
-                model=text_model,
+                model=self.model,
                 contents=[prompt],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
