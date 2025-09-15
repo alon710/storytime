@@ -62,7 +62,7 @@ class TestImageGenerator:
                     mock_response.candidates = [MagicMock()]
                     mock_response.candidates[0].content.parts = [mock_part]
 
-                    generator._generate_content = MagicMock(return_value=mock_response)
+                    generator._generate_content = MagicMock(return_value=mock_response)  # type: ignore[method-assign]
 
                     result = generator.generate_character_reference(
                         character_images=["image1.png", "image2.png"],
@@ -148,7 +148,7 @@ class TestImageGenerator:
                     mock_response.candidates = [MagicMock()]
                     mock_response.candidates[0].content.parts = [mock_part]
 
-                    generator._generate_content = MagicMock(return_value=mock_response)
+                    generator._generate_content = MagicMock(return_value=mock_response)  # type: ignore[method-assign]
 
                     result = generator.generate(
                         seed_images=["seed.png"],
@@ -197,7 +197,7 @@ class TestImageGenerator:
                     mock_response.candidates = [MagicMock()]
                     mock_response.candidates[0].content.parts = [mock_part]
 
-                    generator._generate_content = MagicMock(return_value=mock_response)
+                    generator._generate_content = MagicMock(return_value=mock_response)  # type: ignore[method-assign]
 
                     result = generator.generate(
                         seed_images=["seed.png"],
@@ -211,7 +211,7 @@ class TestImageGenerator:
                     assert result == "/tmp/image.png"
 
                     # Verify template was called (which includes previous pages)
-                    generator._generate_content.assert_called_once()
+                    generator._generate_content.assert_called_once()  # type: ignore[attr-defined]
 
     def test_generate_with_previous_images(self, mock_genai_client, sample_metadata):
         """Test image generation with previous images as context."""
@@ -248,7 +248,7 @@ class TestImageGenerator:
                     mock_response.candidates = [MagicMock()]
                     mock_response.candidates[0].content.parts = [mock_part]
 
-                    generator._generate_content = MagicMock(return_value=mock_response)
+                    generator._generate_content = MagicMock(return_value=mock_response)  # type: ignore[method-assign]
 
                     result = generator.generate(
                         seed_images=["seed.png"],

@@ -98,8 +98,13 @@ class TestPageData:
 
     def test_page_data_validation(self):
         """Test PageData validation."""
+        # Test missing required field
         with pytest.raises(ValidationError):
-            PageData(title="Test", story_text="Test")  # Missing illustration_prompt
+            PageData(title="Test", story_text="Test")  # type: ignore[call-arg]
+
+        # Test that all required fields work fine
+        page = PageData(title="Test", story_text="Test", illustration_prompt="")
+        assert page.illustration_prompt == ""
 
     def test_page_data_json_serialization(self):
         """Test PageData JSON serialization."""
@@ -149,7 +154,7 @@ class TestStoryMetadata:
         """Test StoryMetadata validation."""
         # Test missing required field - create invalid data
         with pytest.raises(ValidationError):
-            StoryMetadata()  # Missing all required fields
+            StoryMetadata()  # type: ignore[call-arg]  # Missing all required fields
 
         # Test that valid data works
         valid_metadata = StoryMetadata(
@@ -238,7 +243,7 @@ class TestStoryTemplate:
     def test_story_template_validation(self):
         """Test StoryTemplate validation."""
         with pytest.raises(ValidationError):
-            StoryTemplate(
+            StoryTemplate(  # type: ignore[call-arg]
                 name="Test",
                 description="Test",
                 default_title="Test",
@@ -309,7 +314,7 @@ class TestGeneratedPage:
     def test_generated_page_validation(self):
         """Test GeneratedPage validation."""
         with pytest.raises(ValidationError):
-            GeneratedPage(
+            GeneratedPage(  # type: ignore[call-arg]
                 title="Test",
                 text="Test",
                 illustration_prompt="Test",

@@ -37,7 +37,7 @@ class TestBaseAIGenerator:
 
         # Verify the template directory path
         Path(__file__).parent.parent.parent / "app" / "ai" / "templates"
-        loader_path = Path(generator.env.loader.searchpath[0])
+        loader_path = Path(generator.env.loader.searchpath[0])  # type: ignore[attr-defined]
         assert loader_path.name == "templates"
 
     def test_generate_content_success(self, mock_genai_client):

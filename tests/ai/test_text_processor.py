@@ -82,7 +82,7 @@ class TestTextProcessor:
                 ]
             }
         )
-        processor.client.models.generate_content.return_value = mock_response
+        processor.client.models.generate_content.return_value = mock_response  # type: ignore[assignment]
 
         result = processor.process_pages(pages=pages, metadata=sample_metadata)
 
@@ -116,14 +116,14 @@ class TestTextProcessor:
         mock_response.candidates[0].content.parts[0].text = json.dumps(
             {"personalized_pages": [{"page_number": 1, "personalized_text": "שלום דוד"}]}
         )
-        processor.client.models.generate_content.return_value = mock_response
+        processor.client.models.generate_content.return_value = mock_response  # type: ignore[assignment]
 
         result = processor.process_pages(pages=pages, metadata=metadata)
 
         assert result == {0: "שלום דוד"}
 
         # Verify the language was passed in the prompt
-        call_args = processor.client.models.generate_content.call_args
+        call_args = processor.client.models.generate_content.call_args  # type: ignore[attr-defined]
         prompt = call_args.kwargs["contents"][0]
         assert "Hebrew" in prompt
 
@@ -232,14 +232,14 @@ class TestTextProcessor:
         mock_response.candidates[0].content.parts[0].text = json.dumps(
             {"personalized_pages": [{"page_number": 1, "personalized_text": "Magical text with Alice"}]}
         )
-        processor.client.models.generate_content.return_value = mock_response
+        processor.client.models.generate_content.return_value = mock_response  # type: ignore[assignment]
 
         result = processor.process_pages(pages=pages, metadata=metadata)
 
         assert result == {0: "Magical text with Alice"}
 
         # Verify instructions were included in the prompt
-        call_args = processor.client.models.generate_content.call_args
+        call_args = processor.client.models.generate_content.call_args  # type: ignore[attr-defined]
         prompt = call_args.kwargs["contents"][0]
         assert "magical and whimsical" in prompt
 
@@ -267,7 +267,7 @@ class TestTextProcessor:
             mock_response.candidates[0].content.parts[0].text = json.dumps(
                 {"pages": [{"page_index": 0, "personalized_text": "Processed"}]}
             )
-            processor.client.models.generate_content.return_value = mock_response
+            processor.client.models.generate_content.return_value = mock_response  # type: ignore[assignment]
 
             processor.process_pages(pages=pages, metadata=sample_metadata)
 
