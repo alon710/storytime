@@ -39,10 +39,11 @@ class TestSettings:
             "GOOGLE_API_KEY": "partial-key",
         }
         with patch.dict(os.environ, env_vars, clear=True):
-            test_settings = Settings()
-            assert test_settings.google_api_key == "partial-key"
-            assert test_settings.model == "gemini-2.5-flash-image-preview"  # Default
-            assert test_settings.log_level == "INFO"  # Default
+            with patch("app.utils.settings.Settings.model_config", {"env_file": None}):
+                test_settings = Settings()
+                assert test_settings.google_api_key == "partial-key"
+                assert test_settings.model == "gemini-2.5-flash-image-preview"  # Default
+                assert test_settings.log_level == "INFO"  # Default
 
     def test_settings_model_config(self):
         """Test Settings model configuration."""
