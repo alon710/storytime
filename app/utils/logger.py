@@ -25,7 +25,6 @@ def setup_logger(
         cache_logger_on_first_use=True,
     )
 
-    # Set up standard library logger
     logging.basicConfig(
         format="%(message)s",
         stream=sys.stdout,
