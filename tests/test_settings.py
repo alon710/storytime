@@ -127,16 +127,17 @@ class TestSettings:
             "DEFAULT_MODEL": "gemini-default",
         }
         with patch.dict(os.environ, env_vars, clear=True):
-            test_settings = Settings()
+            with patch("app.utils.settings.Settings.model_config", {"env_file": None}):
+                test_settings = Settings()
 
-            # Verify each model can be configured independently
-            assert test_settings.seed_image_model == "gemini-exp-seed"
-            assert test_settings.story_text_model == "gemini-flash-text"
-            assert test_settings.story_image_model == "gemini-pro-image"
-            assert test_settings.default_model == "gemini-default"
+                # Verify each model can be configured independently
+                assert test_settings.seed_image_model == "gemini-exp-seed"
+                assert test_settings.story_text_model == "gemini-flash-text"
+                assert test_settings.story_image_model == "gemini-pro-image"
+                assert test_settings.default_model == "gemini-default"
 
-            # Verify legacy model field still works
-            assert test_settings.model == "gemini-2.5-flash-image-preview"  # Default since not set
+                # Verify legacy model field uses default since not set
+                assert test_settings.model == "gemini-2.5-flash-image-preview"
 
     def test_backward_compatibility(self):
         """Test that legacy MODEL environment variable still works."""
@@ -145,12 +146,12 @@ class TestSettings:
             "MODEL": "legacy-model-name",
         }
         with patch.dict(os.environ, env_vars, clear=True):
-            test_settings = Settings()
+            with patch("app.utils.settings.Settings.model_config", {"env_file": None}):
+                test_settings = Settings()
 
-            # Legacy model field should be set
-            assert test_settings.model == "legacy-model-name"
+                # Legacy model field should be set
+                assert test_settings.model == "legacy-model-name"
 
-            # New model fields should use their defaults
-            assert test_settings.seed_image_model == "gemini-2.0-flash-exp"
-            assert test_settings.story_text_model == "gemini-2.0-flash-exp"
-            assert test_settings.story_image_model == "gemini-2.5-flash-image-preview"
+                assert test_settings.seed_image_model == "gemini-2.0-flash-exp"
+                assert test_settings.story_text_model == "gemini-2.0-flash-exp"
+                assert test_settings.story_image_model == "gemini-2.5-flash-image-preview"
