@@ -82,7 +82,7 @@ class SeedImageUploader:
                     with st.spinner("Generating character reference..."):
                         try:
                             client = genai.Client(api_key=settings.google_api_key)
-                            generator = ImageGenerator(client, settings.model)
+                            generator = ImageGenerator(client, settings.seed_image_model)
 
                             image_path = generator.generate_character_reference(
                                 character_images=uploaded_files,
