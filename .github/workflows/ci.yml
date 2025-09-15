@@ -1,0 +1,132 @@
+name: Test and Lint
+
+on:
+  push:
+    branches: [main, refactor]
+  pull_request:
+    branches: [main, refactor]
+
+jobs:
+  lint-and-type-check:
+    name: Lint and Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --all-groups --frozen
+
+      - name: Run Ruff linter
+        run: uvx ruff check . --fix --unsafe-fixes
+
+      - name: Run type checker
+        run: uvx ty check
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.12']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-groups --frozen
+          uv pip install pillow  # Ensure PIL is installed for image tests
+
+      - name: Create .env file
+        run: |
+          echo "GOOGLE_API_KEY=test-key" >> .env
+          echo "MODEL=test-model" >> .env
+          echo "LOG_LEVEL=INFO" >> .env
+
+      - name: Run tests with coverage
+        run: |
+          uv run pytest tests/ \
+            --cov=app \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-report=html \
+            -v
+        env:
+          GOOGLE_API_KEY: test-key
+          MODEL: test-model
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ matrix.python-version }}
+          path: |
+            coverage.xml
+            htmlcov/
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  verify-streamlit:
+    name: Verify Streamlit App
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Create .env file
+        run: |
+          echo "GOOGLE_API_KEY=test-key" >> .env
+          echo "MODEL=test-model" >> .env
+
+      - name: Test Streamlit import
+        run: |
+          uv run python -c "import streamlit; import app; print('Streamlit app imports successfully')"
+
+      - name: Check Streamlit syntax
+        run: |
+          uv run python -m py_compile app.py
+          find app -name "*.py" -exec uv run python -m py_compile {} \;

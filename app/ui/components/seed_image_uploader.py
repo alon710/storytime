@@ -1,8 +1,13 @@
 import streamlit as st
-from typing import Optional, List
+from typing import Optional
 from pathlib import Path
 from google import genai
-from app.utils.schemas import SessionStateKeys, SeedImageData, ReferenceMethod, StoryMetadata
+from app.utils.schemas import (
+    SessionStateKeys,
+    SeedImageData,
+    ReferenceMethod,
+    StoryMetadata,
+)
 from app.utils.settings import settings
 from app.ai.image_generator import ImageGenerator
 
@@ -45,7 +50,9 @@ class SeedImageUploader:
             )
 
             if uploaded_reference:
-                st.session_state[SessionStateKeys.UPLOADED_REFERENCE] = uploaded_reference
+                st.session_state[SessionStateKeys.UPLOADED_REFERENCE] = (
+                    uploaded_reference
+                )
                 st.write("**Uploaded Reference Image:**")
                 st.image(uploaded_reference, width="stretch")
                 st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF] = None
@@ -61,7 +68,9 @@ class SeedImageUploader:
             if uploaded_files and metadata:
                 st.write(f"**Uploaded {len(uploaded_files)} photo(s)**")
 
-                st.info(f"Character: {metadata.character_name}, Age: {metadata.age}, Gender: {metadata.gender.value}")
+                st.info(
+                    f"Character: {metadata.character_name}, Age: {metadata.age}, Gender: {metadata.gender.value}"
+                )
 
                 button_text = (
                     "Regenerate Character Reference"
@@ -81,12 +90,16 @@ class SeedImageUploader:
                                 character_age=metadata.age,
                                 character_gender=metadata.gender.value,
                                 art_style=metadata.art_style.value,
-                                system_prompt=metadata.instructions,
+                                system_prompt=metadata.instructions or "",
                             )
 
                             if image_path:
-                                st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF] = image_path
-                                st.session_state[SessionStateKeys.UPLOADED_REFERENCE] = None
+                                st.session_state[
+                                    SessionStateKeys.GENERATED_CHARACTER_REF
+                                ] = image_path
+                                st.session_state[
+                                    SessionStateKeys.UPLOADED_REFERENCE
+                                ] = None
                                 st.success("Character reference generated!")
                                 st.rerun()
                             else:
@@ -94,11 +107,15 @@ class SeedImageUploader:
                         except Exception as e:
                             st.error(f"Error generating character reference: {str(e)}")
             elif uploaded_files and not metadata:
-                st.warning("Please configure story metadata first (Step 1) before generating character reference.")
+                st.warning(
+                    "Please configure story metadata first (Step 1) before generating character reference."
+                )
 
             if (
                 st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]
-                and Path(st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]).exists()
+                and Path(
+                    st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]
+                ).exists()
             ):
                 st.divider()
                 st.write("**Generated Character Reference:**")
@@ -109,7 +126,9 @@ class SeedImageUploader:
         if st.session_state[SessionStateKeys.UPLOADED_REFERENCE]:
             final_reference = [st.session_state[SessionStateKeys.UPLOADED_REFERENCE]]
         elif st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]:
-            final_reference = [st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]]
+            final_reference = [
+                st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]
+            ]
 
         if final_reference:
             st.session_state[SessionStateKeys.SEED_IMAGES] = final_reference

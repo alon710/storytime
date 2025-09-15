@@ -1,7 +1,7 @@
 """Main orchestrator for StoryTime story generation."""
 
 import traceback
-from typing import Optional, List
+from typing import Optional
 
 from google import genai
 from app.utils.schemas import StoryMetadata, StoryTemplate, GeneratedPage
@@ -24,8 +24,8 @@ class StoryProcessor:
         self,
         story_template: StoryTemplate,
         metadata: StoryMetadata,
-        seed_images: Optional[List] = None,
-    ) -> List[GeneratedPage]:
+        seed_images: Optional[list] = None,
+    ) -> list[GeneratedPage]:
         results = []
 
         try:

@@ -2,13 +2,13 @@
 
 import streamlit as st
 import os
-from typing import List
+
 from app.utils.schemas import GeneratedPage
 
 
 class StoryEditor:
     @staticmethod
-    def render(generated_pages: List[GeneratedPage]) -> List[GeneratedPage]:
+    def render(generated_pages: list[GeneratedPage]) -> list[GeneratedPage]:
         if not generated_pages:
             return generated_pages
 
