@@ -14,6 +14,7 @@ class ImageGenerator(BaseAIGenerator):
         ArtStyle.watercolor: "soft watercolor painting style, gentle brush strokes, flowing colors, artistic paper texture",
         ArtStyle.cartoon: "bright cartoon style, clean lines, vibrant colors, friendly and approachable",
         ArtStyle.ghibli: "Studio Ghibli anime style, soft cel animation, beautiful detailed eyes, magical atmosphere",
+        ArtStyle.vintage: "vintage illustration style, classic storybook aesthetic, muted colors, nostalgic feel",
         ArtStyle.digital: "clean digital art style, smooth shading, modern illustration, crisp details",
         ArtStyle.pixar: "Pixar 3D animation style, expressive features, warm lighting, high-quality rendering",
     }
