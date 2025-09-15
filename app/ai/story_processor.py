@@ -23,53 +23,15 @@ class StoryProcessor:
     def generate_story(
         self,
         story_template: StoryTemplate,
+        metadata: StoryMetadata,
         seed_images: Optional[List] = None,
-        metadata: Optional[StoryMetadata] = None,
-        system_prompt: Optional[str] = None,
-        character_name: Optional[str] = None,
-        character_age: Optional[int] = None,
-        character_gender: Optional[str] = None,
-        language: Optional[str] = None,
     ) -> List[GeneratedPage]:
         results = []
 
         try:
-            # Update metadata with character properties if provided separately
-            if metadata and (character_name or character_age or character_gender):
-                # Update metadata with provided character properties
-                if character_name:
-                    metadata.character_name = character_name
-                if character_age is not None:
-                    metadata.age = character_age
-                if character_gender:
-                    # Convert string to Gender enum if needed
-                    from app.utils.schemas import Gender
-                    if isinstance(character_gender, str):
-                        try:
-                            metadata.gender = Gender(character_gender)
-                        except ValueError:
-                            # If not a valid enum value, keep as is
-                            metadata.gender = character_gender
-                    else:
-                        metadata.gender = character_gender
-                if language:
-                    from app.utils.schemas import Language
-                    if isinstance(language, str):
-                        try:
-                            metadata.language = Language(language)
-                        except ValueError:
-                            metadata.language = language
-                    else:
-                        metadata.language = language
-
             processed_texts = self.text_processor.process_pages(
                 metadata=metadata,
                 pages=story_template.pages,
-                system_prompt=system_prompt,
-                character_name=character_name,
-                character_age=character_age,
-                character_gender=character_gender,
-                language=language,
             )
 
             for page_number, page in enumerate(story_template.pages):
@@ -86,7 +48,7 @@ class StoryProcessor:
                 )
 
                 image_path = None
-                if seed_images or metadata:
+                if seed_images:
                     previous_pages = (
                         [
                             {
@@ -112,7 +74,7 @@ class StoryProcessor:
                         page_title=page.title,
                         story_text=text,
                         metadata=metadata,
-                        system_prompt=system_prompt,
+                        system_prompt=metadata.instructions,
                         previous_pages=previous_pages,
                         previous_images=previous_images,
                     )

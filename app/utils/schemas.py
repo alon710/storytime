@@ -17,7 +17,6 @@ class SessionStateKeys:
     GENERATED_CHARACTER_REF = "generated_character_ref"
     UPLOADED_REFERENCE = "uploaded_reference"
     ART_STYLE = "art_style"
-    SYSTEM_PROMPT_SEED = "system_prompt_seed"
 
 
 class Gender(str, Enum):
@@ -57,12 +56,12 @@ class PageData(BaseModel):
 
 
 class StoryMetadata(BaseModel):
-    instructions: Optional[str] = None
-    art_style: Optional[ArtStyle] = ArtStyle.watercolor
-    age: int
-    gender: str
     character_name: str
-    language: Optional[str] = "English"
+    age: int
+    gender: Gender
+    language: Language = Language.english
+    art_style: ArtStyle = ArtStyle.watercolor
+    instructions: Optional[str] = None
 
 
 class SeedImageData(BaseModel):

@@ -1,11 +1,10 @@
 import streamlit as st
-from typing import Optional
+from typing import Optional, List
 from pathlib import Path
 from google import genai
-from app.utils.schemas import StoryMetadata, ArtStyle, SessionStateKeys, SeedImageData
+from app.utils.schemas import SessionStateKeys, SeedImageData, ReferenceMethod, StoryMetadata
 from app.utils.settings import settings
 from app.ai.image_generator import ImageGenerator
-from app.utils.schemas import Gender, Language, ReferenceMethod
 
 
 class SeedImageUploader:
@@ -14,6 +13,7 @@ class SeedImageUploader:
         defaults = {
             SessionStateKeys.GENERATED_CHARACTER_REF: None,
             SessionStateKeys.UPLOADED_REFERENCE: None,
+            SessionStateKeys.SEED_IMAGES: [],
         }
 
         for key, value in defaults.items():
@@ -21,61 +21,17 @@ class SeedImageUploader:
                 st.session_state[key] = value
 
     @staticmethod
-    def render() -> Optional[SeedImageData]:
+    def render(metadata: Optional[StoryMetadata] = None) -> Optional[SeedImageData]:
         SeedImageUploader.initialize_session_state()
 
-        st.subheader("Character Reference")
+        st.subheader("Character Reference Image")
+        st.write("Provide a visual reference for your story's main character.")
 
         reference_method = st.radio(
             "Choose how to provide character reference",
             options=[method.value for method in ReferenceMethod],
             horizontal=True,
-        )
-
-        st.divider()
-        st.subheader("Character Parameters")
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            character_name = st.text_input(
-                "Character Name",
-                placeholder="e.g., Alice, Tom",
-                key=SessionStateKeys.CHAR_NAME,
-            )
-            character_age = st.number_input(
-                "Character Age",
-                min_value=1,
-                max_value=18,
-                key=SessionStateKeys.CHAR_AGE,
-            )
-
-        with col2:
-            character_gender = st.selectbox(
-                "Gender",
-                options=[gender.value for gender in Gender],
-                key=SessionStateKeys.CHAR_GENDER,
-            )
-            art_style = st.selectbox(
-                "Art Style",
-                options=[style.value for style in ArtStyle],
-                index=0,
-                key=SessionStateKeys.ART_STYLE,
-            )
-
-        (col3,) = st.columns(1)
-        with col3:
-            language = st.selectbox(
-                "Language",
-                options=[lang.value for lang in Language],
-                key=SessionStateKeys.LANGUAGE,
-            )
-
-        system_prompt = st.text_area(
-            "System Prompt (Optional)",
-            placeholder="Additional character details, themes, mood, or specific requirements for the story",
-            height=100,
-            key=SessionStateKeys.SYSTEM_PROMPT_SEED,
+            help="Upload an existing reference image or generate one from photos",
         )
 
         st.divider()
@@ -89,9 +45,7 @@ class SeedImageUploader:
             )
 
             if uploaded_reference:
-                st.session_state[SessionStateKeys.UPLOADED_REFERENCE] = (
-                    uploaded_reference
-                )
+                st.session_state[SessionStateKeys.UPLOADED_REFERENCE] = uploaded_reference
                 st.write("**Uploaded Reference Image:**")
                 st.image(uploaded_reference, width="stretch")
                 st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF] = None
@@ -104,8 +58,10 @@ class SeedImageUploader:
                 help="Upload photos to generate a character reference image",
             )
 
-            if uploaded_files:
+            if uploaded_files and metadata:
                 st.write(f"**Uploaded {len(uploaded_files)} photo(s)**")
+
+                st.info(f"Character: {metadata.character_name}, Age: {metadata.age}, Gender: {metadata.gender.value}")
 
                 button_text = (
                     "Regenerate Character Reference"
@@ -113,7 +69,7 @@ class SeedImageUploader:
                     else "Generate Character Reference"
                 )
 
-                if st.button(button_text, width="stretch"):
+                if st.button(button_text, use_container_width=True):
                     with st.spinner("Generating character reference..."):
                         try:
                             client = genai.Client(api_key=settings.google_api_key)
@@ -121,58 +77,42 @@ class SeedImageUploader:
 
                             image_path = generator.generate_character_reference(
                                 character_images=uploaded_files,
-                                character_name=character_name,
-                                character_age=character_age,
-                                character_gender=character_gender,
-                                art_style=art_style,
-                                system_prompt=system_prompt,
+                                character_name=metadata.character_name,
+                                character_age=metadata.age,
+                                character_gender=metadata.gender.value,
+                                art_style=metadata.art_style.value,
+                                system_prompt=metadata.instructions,
                             )
 
                             if image_path:
-                                st.session_state[
-                                    SessionStateKeys.GENERATED_CHARACTER_REF
-                                ] = image_path
-                                st.session_state[
-                                    SessionStateKeys.UPLOADED_REFERENCE
-                                ] = None
+                                st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF] = image_path
+                                st.session_state[SessionStateKeys.UPLOADED_REFERENCE] = None
                                 st.success("Character reference generated!")
                                 st.rerun()
                             else:
                                 st.error("Failed to generate character reference")
                         except Exception as e:
                             st.error(f"Error generating character reference: {str(e)}")
+            elif uploaded_files and not metadata:
+                st.warning("Please configure story metadata first (Step 1) before generating character reference.")
 
             if (
                 st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]
-                and Path(
-                    st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]
-                ).exists()
+                and Path(st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]).exists()
             ):
                 st.divider()
+                st.write("**Generated Character Reference:**")
                 st.image(st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF])
-
-        if system_prompt:
-            st.session_state[SessionStateKeys.SYSTEM_PROMPT] = system_prompt
-
-        metadata = StoryMetadata(
-            instructions=system_prompt if system_prompt else None,
-            art_style=ArtStyle(art_style),
-            character_name=character_name if character_name else "Hero",
-            age=character_age,
-            gender=Gender(character_gender),
-            language=Language(language),
-        )
 
         final_reference = None
 
         if st.session_state[SessionStateKeys.UPLOADED_REFERENCE]:
             final_reference = [st.session_state[SessionStateKeys.UPLOADED_REFERENCE]]
         elif st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]:
-            final_reference = [
-                st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]
-            ]
+            final_reference = [st.session_state[SessionStateKeys.GENERATED_CHARACTER_REF]]
 
-        if final_reference or system_prompt:
-            return SeedImageData(images=final_reference or [], metadata=metadata)
+        if final_reference:
+            st.session_state[SessionStateKeys.SEED_IMAGES] = final_reference
+            return SeedImageData(images=final_reference, metadata=metadata)
 
         return None

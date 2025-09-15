@@ -28,22 +28,13 @@ class TextProcessor(BaseAIGenerator):
     def process_pages(
         self,
         pages: List[PageData],
-        metadata: Optional[StoryMetadata] = None,
-        system_prompt: Optional[str] = None,
-        character_name: Optional[str] = None,
-        character_age: Optional[int] = None,
-        character_gender: Optional[str] = None,
-        language: Optional[str] = None,
+        metadata: StoryMetadata,
     ) -> Dict[int, str]:
         """Process story pages using text_personalization.j2 template for better narrative flow.
 
         Args:
             pages: List of PageData objects with story content
-            metadata: Optional metadata with instructions
-            system_prompt: Optional system prompt for generation
-            character_name: Name of the main character
-            character_age: Age of the character
-            character_gender: Gender of the character
+            metadata: Story metadata with character information and instructions
 
         Returns:
             Dictionary mapping page index to processed text
@@ -67,17 +58,17 @@ class TextProcessor(BaseAIGenerator):
                 pages_with_context.append(page_dict)
 
             prompt = template.render(
-                character_name=character_name or "Hero",
-                character_age=character_age or 5,
-                character_gender=character_gender or "child",
-                language=language or "English",
+                character_name=metadata.character_name,
+                character_age=metadata.age,
+                character_gender=metadata.gender.value,
+                language=metadata.language.value,
                 is_batch_processing=True,
                 pages_data=pages_with_context,
             )
 
             # Add any additional system instructions
-            if system_prompt:
-                prompt = f"{system_prompt}\n\n{prompt}"
+            if metadata.instructions:
+                prompt = f"{metadata.instructions}\n\n{prompt}"
 
             # Use text-only model for JSON schema support
             text_model = "gemini-2.0-flash-exp"
@@ -136,11 +127,7 @@ class TextProcessor(BaseAIGenerator):
                 # Fallback: process pages individually
                 return self._process_pages_individually(
                     pages,
-                    character_name,
-                    character_age,
-                    character_gender,
-                    language,
-                    system_prompt,
+                    metadata,
                 )
 
         except Exception as e:
@@ -152,11 +139,7 @@ class TextProcessor(BaseAIGenerator):
     def _process_pages_individually(
         self,
         pages: List[PageData],
-        character_name: str,
-        character_age: int,
-        character_gender: str,
-        language: str,
-        system_prompt: Optional[str] = None,
+        metadata: StoryMetadata,
     ) -> Dict[int, str]:
         """Fallback method to process pages individually with context."""
         processed_texts = {}
@@ -167,17 +150,17 @@ class TextProcessor(BaseAIGenerator):
                 # Use the template for single page processing
                 template = self.env.get_template("text_personalization.j2")
                 prompt = template.render(
-                    character_name=character_name,
-                    character_age=character_age,
-                    character_gender=character_gender,
-                    language=language,
+                    character_name=metadata.character_name,
+                    character_age=metadata.age,
+                    character_gender=metadata.gender.value,
+                    language=metadata.language.value,
                     is_batch_processing=False,
                     story_text=page.story_text,
                     previous_pages=previous_pages,  # Pass all previous pages for context
                 )
 
-                if system_prompt:
-                    prompt = f"{system_prompt}\n\n{prompt}"
+                if metadata.instructions:
+                    prompt = f"{metadata.instructions}\n\n{prompt}"
 
                 response = self._generate_content([prompt])
 
@@ -200,8 +183,8 @@ class TextProcessor(BaseAIGenerator):
                 logger.warning(f"Failed to process page {i}: {str(e)}")
                 # Use original text as fallback
                 processed_texts[i] = page.story_text.replace(
-                    "Hero", character_name
-                ).replace("hero", character_name)
+                    "Hero", metadata.character_name
+                ).replace("hero", metadata.character_name)
                 previous_pages.append(
                     {"title": page.title, "story_text": processed_texts[i]}
                 )

@@ -28,35 +28,24 @@ class DownloadManager:
     def create_metadata_dict(
         pages: List[GeneratedPage],
         story_title: str,
-        character_name: Optional[str] = None,
-        character_age: Optional[int] = None,
-        character_gender: Optional[str] = None,
-        language: Optional[str] = None,
-        metadata: Optional[StoryMetadata] = None,
+        metadata: StoryMetadata,
         template: Optional[StoryTemplate] = None,
-        system_prompt: Optional[str] = None,
     ) -> dict:
         """Create metadata dictionary for the story."""
         metadata_dict = {
             "story_title": story_title,
             "total_pages": len(pages),
-            "language": language or (metadata.language if metadata else "English"),
+            "language": metadata.language.value,
             "character": {
-                "name": character_name
-                or (metadata.character_name if metadata else "Unknown"),
-                "age": character_age or (metadata.age if metadata else None),
-                "gender": character_gender or (metadata.gender if metadata else None),
+                "name": metadata.character_name,
+                "age": metadata.age,
+                "gender": metadata.gender.value,
             },
+            "art_style": metadata.art_style.value,
         }
 
-        if metadata:
-            metadata_dict["art_style"] = (
-                metadata.art_style.value if metadata.art_style else None
-            )
+        if metadata.instructions:
             metadata_dict["instructions"] = metadata.instructions
-
-        if system_prompt:
-            metadata_dict["system_prompt"] = system_prompt
 
         if template:
             metadata_dict["template_name"] = template.name
@@ -79,13 +68,8 @@ class DownloadManager:
         cls,
         pages: List[GeneratedPage],
         story_title: str,
-        character_name: Optional[str] = None,
-        character_age: Optional[int] = None,
-        character_gender: Optional[str] = None,
-        language: Optional[str] = None,
-        metadata: Optional[StoryMetadata] = None,
+        metadata: StoryMetadata,
         template: Optional[StoryTemplate] = None,
-        system_prompt: Optional[str] = None,
     ) -> Optional[str]:
         """Create a zip archive containing story content, metadata, and images."""
         try:
@@ -102,13 +86,8 @@ class DownloadManager:
                 metadata_dict = cls.create_metadata_dict(
                     pages=pages,
                     story_title=story_title,
-                    character_name=character_name,
-                    character_age=character_age,
-                    character_gender=character_gender,
-                    language=language,
                     metadata=metadata,
                     template=template,
-                    system_prompt=system_prompt,
                 )
                 metadata_json = json.dumps(metadata_dict, indent=2, ensure_ascii=False)
                 zipf.writestr("metadata.json", metadata_json.encode("utf-8"))

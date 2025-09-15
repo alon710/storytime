@@ -1,26 +1,34 @@
 import streamlit as st
 
+from app.ui.components.metadata_manager import MetadataManager
 from app.ui.components.seed_image_uploader import SeedImageUploader
 from app.ui.components.template_editor import TemplateEditor
 from app.ui.components.story_editor import StoryEditor
 from app.ai.story_processor import StoryProcessor
-from app.utils.schemas import Gender, Language, SessionStateKeys
+from app.utils.schemas import SessionStateKeys
 from app.utils.download_manager import DownloadManager
 from app.utils.utils import initialize_session_state, load_story_templates
 
 
+def render_metadata_step() -> None:
+    st.header("Step 1: Story Configuration")
+    st.write("Configure the main parameters for your story.")
+    MetadataManager.render()
+
+
 def render_seed_images_step() -> None:
-    st.header("Step 1: Upload Seed Images")
-    st.write("Upload images to use as visual references for your story.")
-    seed_data = SeedImageUploader.render()
+    st.header("Step 2: Character Reference")
+    st.write("Provide a visual reference for your story's main character.")
+
+    metadata = st.session_state.get(SessionStateKeys.METADATA)
+    seed_data = SeedImageUploader.render(metadata=metadata)
 
     if seed_data:
         st.session_state[SessionStateKeys.SEED_IMAGES] = seed_data.images
-        st.session_state[SessionStateKeys.METADATA] = seed_data.metadata
 
 
 def render_story_template_step() -> None:
-    st.header("Step 2: Load and Edit Story Template")
+    st.header("Step 3: Load and Edit Story Template")
 
     templates = load_story_templates()
 
@@ -56,48 +64,22 @@ def render_story_template_step() -> None:
 
 
 def render_generation_step() -> None:
-    if st.button("Generate Story", width="stretch"):
+    st.header("Step 4: Generate Story")
+
+    metadata = st.session_state.get(SessionStateKeys.METADATA)
+    if not metadata:
+        st.warning("Please complete Step 1: Story Configuration first.")
+        return
+
+    if st.button("Generate Story", use_container_width=True):
         with st.spinner("Generating your story..."):
             try:
                 processor = StoryProcessor()
-                character_name = st.session_state.get(
-                    SessionStateKeys.CHAR_NAME, "Hero"
-                )
-                character_age = st.session_state.get(SessionStateKeys.CHAR_AGE, 5)
-                character_gender = st.session_state.get(
-                    SessionStateKeys.CHAR_GENDER, Gender.boy
-                )
-                language = st.session_state.get(
-                    SessionStateKeys.LANGUAGE, Language.english
-                )
-
-                if hasattr(character_gender, "value"):
-                    character_gender = character_gender.value
-                if hasattr(language, "value"):
-                    language = language.value
-
-                metadata = st.session_state.get(SessionStateKeys.METADATA)
-                if metadata:
-                    metadata.character_name = character_name
-                    metadata.age = character_age
-                    metadata.gender = character_gender
-                    metadata.language = language
-
-                system_prompt = st.session_state.get(SessionStateKeys.SYSTEM_PROMPT)
-                if not system_prompt:
-                    system_prompt = st.session_state.get(
-                        SessionStateKeys.SYSTEM_PROMPT_SEED, ""
-                    )
 
                 generated_pages = processor.generate_story(
                     story_template=st.session_state[SessionStateKeys.EDITED_TEMPLATE],
-                    seed_images=st.session_state[SessionStateKeys.SEED_IMAGES],
+                    seed_images=st.session_state.get(SessionStateKeys.SEED_IMAGES, []),
                     metadata=metadata,
-                    system_prompt=system_prompt,
-                    character_name=character_name,
-                    character_age=character_age,
-                    character_gender=character_gender,
-                    language=language,
                 )
 
                 if generated_pages:
@@ -131,17 +113,16 @@ def render_generation_step() -> None:
                 else "Story"
             )
 
-            zip_path = DownloadManager.create_archive(
-                pages=st.session_state[SessionStateKeys.GENERATED_PAGES],
-                story_title=story_title,
-                character_name=st.session_state.get(SessionStateKeys.CHAR_NAME),
-                character_age=st.session_state.get(SessionStateKeys.CHAR_AGE),
-                character_gender=st.session_state.get(SessionStateKeys.CHAR_GENDER),
-                language=st.session_state.get(SessionStateKeys.LANGUAGE),
-                metadata=st.session_state.get(SessionStateKeys.METADATA),
-                template=st.session_state.get(SessionStateKeys.EDITED_TEMPLATE),
-                system_prompt=st.session_state.get(SessionStateKeys.SYSTEM_PROMPT),
-            )
+            metadata = st.session_state.get(SessionStateKeys.METADATA)
+            if metadata:
+                zip_path = DownloadManager.create_archive(
+                    pages=st.session_state[SessionStateKeys.GENERATED_PAGES],
+                    story_title=story_title,
+                    metadata=metadata,
+                    template=st.session_state.get(SessionStateKeys.EDITED_TEMPLATE),
+                )
+            else:
+                zip_path = None
 
             if zip_path:
                 with open(zip_path, "rb") as f:
@@ -159,10 +140,16 @@ def render_generation_step() -> None:
 
 def main() -> None:
     initialize_session_state()
+
+    render_metadata_step()
+    st.divider()
+
     render_seed_images_step()
     st.divider()
+
     render_story_template_step()
     st.divider()
+
     render_generation_step()
 
 
