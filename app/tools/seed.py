@@ -1,15 +1,7 @@
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from PIL import Image
-else:
-    try:
-        from PIL import Image
-    except ImportError:
-        Image = None
 from app.tools.base import BaseTool, BaseToolResponse
 from typing import Type
 from pydantic import Field
+from PIL import Image
 
 
 class SeedToolResponse(BaseToolResponse):
@@ -33,7 +25,7 @@ class SeedTool(BaseTool):
             model=model,
             name="use_reference_as_seed",
             description="Uses uploaded reference images as seed images for story character consistency",
-            system_prompt="You are an expert AI artist specializing in children's book characters. Your task is to generate a single image of a child with two distinct poses: a front-facing view on the left and a side profile view on the right. The final image should be suitable for use as a foundational \"seed image\" for future illustrations. The image must be a cohesive illustration. Maintain a consistent art style, lighting, and proportionality across both poses. The child's facial features, hairstyle, and clothing must be faithfully preserved based on the provided reference image. The background should be plain to maintain focus on the character.",
+            system_prompt="You are an expert AI artist specializing in children's book characters. Your task is to generate a single image of a child with two distinct poses: a front-facing view on the left and a side profile view on the right. The final image should be suitable for use as a foundational \"seed image\" for future illustrations. The image must be a cohesive illustration. Maintain a consistent art style, lighting, and proportionality across both poses. The child's facial features, hairstyle, and clothing must be faithfully preserved based on the provided reference image. The background should be plain to maintain focus on the character. In a retro mid-century children’s book illustration style, in the spirit of Mary Blair and classic 1950s picture books. The image should faithfully preserve the child’s facial features, hairstyle, clothing, and proportions from the reference photo, ensuring consistency across poses. Stylized flat shapes, bold geometric forms, painterly textures, and a pastel-rich vintage color palette give the illustration a nostalgic feel. Plain, simple background for clarity.",
         )
 
     @property
@@ -69,20 +61,41 @@ class SeedTool(BaseTool):
                     "Using direct kwargs", kwargs=kwargs, session_id=session_id
                 )
 
-            # Extract session_id from input context if not in args
-            if not session_id and "input" in kwargs:
-                input_text = kwargs.get("input", "")
-                if "Session ID:" in input_text:
-                    import re
+            # Extract session_id from input context or kwargs
+            if not session_id:
+                # First try direct session_id in kwargs
+                session_id = kwargs.get("session_id")
 
-                    session_match = re.search(
-                        r"Session ID:\s*([a-f0-9\-]+)", input_text
-                    )
-                    if session_match:
-                        session_id = session_match.group(1)
-                        self.logger.info(
-                            "Extracted session_id from input", session_id=session_id
+                # If not found, try extracting from input text
+                if not session_id and "input" in kwargs:
+                    input_text = kwargs.get("input", "")
+                    if "Session ID:" in input_text:
+                        import re
+
+                        session_match = re.search(
+                            r"Session ID:\s*([a-f0-9\-]+)", input_text
                         )
+                        if session_match:
+                            session_id = session_match.group(1)
+                            self.logger.info(
+                                "Extracted session_id from input", session_id=session_id
+                            )
+
+                # If still not found, check if it's embedded in the agent's full context
+                if not session_id:
+                    # LangChain might pass the entire agent input as a single string
+                    all_input = str(kwargs)
+                    if "Session ID:" in all_input:
+                        import re
+
+                        session_match = re.search(
+                            r"Session ID:\s*([a-f0-9\-]+)", all_input
+                        )
+                        if session_match:
+                            session_id = session_match.group(1)
+                            self.logger.info(
+                                "Extracted session_id from kwargs", session_id=session_id
+                            )
 
             # Try to get reference images if session_id is available
             reference_images = None
@@ -105,7 +118,6 @@ class SeedTool(BaseTool):
 
             # Save seed image and update session if successful
             if result and session_id:
-                import os
                 from pathlib import Path
 
                 # Create sessions directory in project root
@@ -200,9 +212,8 @@ The background should be plain and the art style should be consistent between bo
             response = await loop.run_in_executor(
                 None,
                 lambda: client.models.generate_content(
-                    model=self.model,
-                    contents=[generation_prompt] + reference_images
-                )
+                    model=self.model, contents=[generation_prompt] + reference_images
+                ),
             )
 
             # Extract the generated image from response
@@ -212,7 +223,7 @@ The background should be plain and the art style should be consistent between bo
                 self.log_success(
                     "seed_generation",
                     entity_type=entity_type,
-                    message="Successfully generated AI seed image with two poses"
+                    message="Successfully generated AI seed image with two poses",
                 )
                 return generated_image
             else:
@@ -229,23 +240,33 @@ The background should be plain and the art style should be consistent between bo
 
     def _extract_image_from_response(self, response) -> Image.Image | None:
         try:
-            self.logger.info("Extracting image from Gemini response", response_type=type(response).__name__)
+            self.logger.info(
+                "Extracting image from Gemini response",
+                response_type=type(response).__name__,
+            )
 
             # Try different ways to extract image from Gemini response
-            if hasattr(response, 'candidates') and response.candidates:
+            if hasattr(response, "candidates") and response.candidates:
                 candidate = response.candidates[0]
-                if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                if hasattr(candidate, "content") and hasattr(
+                    candidate.content, "parts"
+                ):
                     for part in candidate.content.parts:
-                        if hasattr(part, 'inline_data') and hasattr(part.inline_data, 'data'):
+                        if hasattr(part, "inline_data") and hasattr(
+                            part.inline_data, "data"
+                        ):
                             # Gemini inline_data.data contains raw image bytes, not base64
                             from io import BytesIO
+
                             image_data = part.inline_data.data
                             image = Image.open(BytesIO(image_data))
                             self.logger.info("Successfully extracted generated image")
                             return image
 
             # Log available attributes for debugging
-            self.logger.warning("Could not extract image", available_attrs=dir(response))
+            self.logger.warning(
+                "Could not extract image", available_attrs=dir(response)
+            )
             return None
         except Exception as e:
             self.logger.error("Error extracting image", error=str(e))

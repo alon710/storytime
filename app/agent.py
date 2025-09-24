@@ -141,6 +141,7 @@ Always check the session data to see what information has already been collected
                 {
                     "input": f"{context}\n\nSession ID: {session_id}\n\nUser message: {user_message}",
                     "chat_history": history_messages,
+                    "session_id": session_id,
                 }
             )
 
