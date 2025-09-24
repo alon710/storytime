@@ -5,7 +5,7 @@ from pydantic import Field
 
 class Settings(BaseSettings):
     main_agent_model: str = "gpt-4o-mini"
-    seed_model: str = "gemini-2.0-flash-exp"
+    seed_model: str = "gemini-2.5-flash-image-preview"
     narrator_model: str = "gemini-1.5-pro"
     illustrator_model: str = "gemini-2.5-flash-image-preview"
     storage_backend: str = "local"

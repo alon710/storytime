@@ -133,3 +133,38 @@ class SessionManager:
             missing.append("challenge_theme")
 
         return missing
+
+    async def store_reference_images(self, session_id: str, reference_images: list) -> None:
+        import pickle
+        import base64
+
+        try:
+            async with self.async_session() as db:
+                result = await db.execute(
+                    select(SessionData).where(SessionData.session_id == session_id)
+                )
+                session_data = result.scalar_one_or_none()
+
+                if session_data:
+                    serialized_images = base64.b64encode(pickle.dumps(reference_images)).decode('utf-8')
+                    session_data.collected_fields["reference_images"] = serialized_images
+                    await db.commit()
+                    self.logger.info("Stored reference images", session_id=session_id, count=len(reference_images))
+
+        except Exception as e:
+            self.logger.error("Failed to store reference images", session_id=session_id, error=str(e))
+
+    async def get_reference_images(self, session_id: str) -> list | None:
+        import pickle
+        import base64
+
+        try:
+            session_data = await self.get_session_data(session_id)
+            if session_data and "reference_images" in session_data.collected_fields:
+                serialized_images = session_data.collected_fields["reference_images"]
+                reference_images = pickle.loads(base64.b64decode(serialized_images))
+                return reference_images
+        except Exception as e:
+            self.logger.error("Failed to retrieve reference images", session_id=session_id, error=str(e))
+
+        return None

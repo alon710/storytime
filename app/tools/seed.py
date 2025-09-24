@@ -37,12 +37,21 @@ Focus on warm, friendly designs suitable for ages 3-8 with clear, recognizable f
                 args = kwargs["args"][0] if kwargs["args"] else {}
                 entity_type = args.get("name", "child")
                 entity_description = f"{args.get('age', 4)}-year-old {args.get('gender', 'child')} named {args.get('name', 'child')}"
+                session_id = args.get("session_id")
             else:
                 # Direct keyword arguments
                 entity_type = kwargs.get("entity_type", "child")
                 entity_description = kwargs.get("entity_description", "A friendly child character")
+                session_id = kwargs.get("session_id")
 
-            result = await self.execute(entity_type, entity_description, None)
+            # Try to get reference images if session_id is available
+            reference_images = None
+            if session_id:
+                from app.database.session_manager import SessionManager
+                session_manager = SessionManager()
+                reference_images = await session_manager.get_reference_images(session_id)
+
+            result = await self.execute(entity_type, entity_description, reference_images)
             return f"Generated seed image for {entity_type}" if result else f"Failed to generate seed image for {entity_type}"
         except Exception as e:
             return f"Error generating seed image: {str(e)}"
@@ -57,7 +66,8 @@ Focus on warm, friendly designs suitable for ages 3-8 with clear, recognizable f
         try:
             prompt = self._build_seed_prompt(entity_type, entity_description)
 
-            client = genai.Client()
+            from app.settings import settings
+            client = genai.Client(api_key=settings.google_api_key)
 
             loop = asyncio.get_event_loop()
             if reference_images:

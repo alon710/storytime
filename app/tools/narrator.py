@@ -63,7 +63,8 @@ Focus on positive messaging, character development, and vivid scene descriptions
         try:
             prompt = self._build_story_prompt(child_name, child_age, child_gender, challenge_theme)
 
-            client = genai.Client()
+            from app.settings import settings
+            client = genai.Client(api_key=settings.google_api_key)
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(
                 None,

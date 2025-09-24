@@ -56,8 +56,13 @@ Your role is to:
    - Child's gender
    - Challenge or theme for the story (what the child is struggling with or wants to learn)
 
-3. When you have ALL required information, use your tools to:
-   - Generate seed images for characters
+3. REFERENCE IMAGES:
+   - If users mention multiple characters (child + doll/pet/toy), encourage them to upload photos
+   - Reference images help create more personalized and accurate illustrations
+   - When images are available, acknowledge them warmly and explain how they'll enhance the story
+
+4. When you have ALL required information, use your tools to:
+   - Generate seed images for characters (using reference images if available)
    - Create the personalized story
    - Generate illustrations
    - Save everything
@@ -69,18 +74,24 @@ CONVERSATION GUIDELINES:
 - If information is missing or unclear, ask follow-up questions
 - Keep track of what you've learned in each session
 - When ready to generate, explain what you're doing
+- If users mention toys, dolls, pets, or other characters, suggest uploading reference photos
 
 IMPORTANT: Only call tools when you have collected ALL required information from the user.
 If any information is missing, continue the conversation to gather it naturally.
 
 Always check the session data to see what information has already been collected before asking questions."""
 
-    async def chat(self, session_id: str, user_message: str) -> str:
+    async def chat(self, session_id: str, user_message: str, reference_images: list | None = None) -> str:
         try:
             await self.session_manager.add_chat_message(session_id, "human", user_message)
 
             session_data = await self.session_manager.get_session_data(session_id)
             missing_fields = await self.session_manager.get_missing_fields(session_id)
+
+            # Store reference images in session if provided
+            if reference_images:
+                await self.session_manager.store_reference_images(session_id, reference_images)
+                self.logger.info("Stored reference images", session_id=session_id, count=len(reference_images))
 
             chat_history = await self.session_manager.get_chat_history(session_id)
             history_messages = []
@@ -90,7 +101,7 @@ Always check the session data to see what information has already been collected
                 else:
                     history_messages.append(AIMessage(content=msg.content))
 
-            context = self._build_context(session_data, missing_fields)
+            context = self._build_context(session_data, missing_fields, reference_images)
 
             response = await self.executor.ainvoke({
                 "input": f"{context}\n\nUser message: {user_message}",
@@ -109,7 +120,7 @@ Always check the session data to see what information has already been collected
             self.logger.error("Chat processing failed", error=str(e), session_id=session_id)
             return "I'm sorry, I encountered an error. Could you please try again?"
 
-    def _build_context(self, session_data, missing_fields: list[str]) -> str:
+    def _build_context(self, session_data, missing_fields: list[str], reference_images: list | None = None) -> str:
         context_parts = ["Session Context:"]
 
         if session_data:
@@ -122,11 +133,17 @@ Always check the session data to see what information has already been collected
             if session_data.challenge_theme:
                 context_parts.append(f"- Challenge/theme: {session_data.challenge_theme}")
 
+        if reference_images:
+            context_parts.append(f"- 📸 Reference images available: {len(reference_images)} image(s)")
+            context_parts.append("- Use these images when generating seed images for more personalized results")
+
         if missing_fields:
             context_parts.append(f"- Still need to collect: {', '.join(missing_fields)}")
 
         if not missing_fields:
             context_parts.append("- ✅ ALL INFORMATION COLLECTED - Ready to generate story!")
+            if reference_images:
+                context_parts.append("- 🎨 With reference images for enhanced personalization!")
 
         return "\n".join(context_parts)
 

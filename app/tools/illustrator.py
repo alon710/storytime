@@ -26,7 +26,7 @@ Maintain character consistency using seed images and ensure visual continuity ac
         try:
             # Handle different argument formats that LangChain might send
             if "args" in kwargs and isinstance(kwargs["args"], list) and kwargs["args"]:
-                args = kwargs["args"][0] if kwargs["args"] else {}
+                kwargs["args"][0] if kwargs["args"] else {}
                 # For now, create a simple placeholder story page
                 from app.tools.narrator import StoryPage
                 story_page = StoryPage(
@@ -63,7 +63,8 @@ Maintain character consistency using seed images and ensure visual continuity ac
         try:
             prompt = self._build_illustration_prompt(story_page)
 
-            client = genai.Client()
+            from app.settings import settings
+            client = genai.Client(api_key=settings.google_api_key)
 
             contents = [prompt]
 
