@@ -1,10 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Type
 import structlog
 from langchain.tools import BaseTool as LangChainBaseTool
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 logger = structlog.get_logger()
+
+
+class BaseToolResponse(BaseModel):
+    success: bool
+    message: str
 
 
 class BaseTool(LangChainBaseTool, ABC):
@@ -19,8 +24,13 @@ class BaseTool(LangChainBaseTool, ABC):
         super().__init__(model=model, **kwargs)
         self.logger = logger.bind(tool=self.__class__.__name__, model=model)
 
+    @property
     @abstractmethod
-    async def _arun(self, *args, **kwargs) -> Any | None:
+    def response_model(self) -> Type[BaseToolResponse]:
+        raise NotImplementedError("Each tool must implement a response_model property")
+
+    @abstractmethod
+    async def _arun(self, *args, **kwargs) -> str:
         pass
 
     def _run(self, *args, **kwargs) -> Any | None:

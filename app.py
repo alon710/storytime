@@ -102,17 +102,35 @@ if user_input := st.chat_input("Tell me about your child...", accept_file="multi
                 )
                 st.markdown(response)
 
-                # Check if a seed image was generated and display it
-                if "Generated seed image" in response or "Using your photo" in response:
-                    seed_status = asyncio.run(
-                        st.session_state.agent.session_manager.get_seed_approval_status(st.session_state.session_id)
-                    )
-                    if seed_status["seed_generated"] and seed_status["seed_path"]:
-                        import os
-                        if os.path.exists(seed_status["seed_path"]):
-                            st.write("**Here's the character image I created:**")
-                            st.image(seed_status["seed_path"], caption="Character Seed Image", width=300)
-                            st.write("Does this look like your child? Please let me know if I should proceed or if you'd like me to try again!")
+                # Check if response contains structured tool output
+                import json
+                try:
+                    # Try to parse JSON response from tools
+                    if response.strip().startswith('{') and response.strip().endswith('}'):
+                        tool_response = json.loads(response)
+
+                        # Check if it's a seed tool response
+                        if "seed_image_path" in tool_response and tool_response.get("seed_image_path"):
+                            import os
+                            seed_path = tool_response["seed_image_path"]
+                            child_name = tool_response.get("child_name", "your child")
+
+                            if os.path.exists(seed_path):
+                                st.write(f"**Here's the character image for {child_name}:**")
+                                st.image(seed_path, caption="Character Seed Image", width=300)
+                                st.write(f"Does this look like {child_name}? Please let me know if I should proceed or if you'd like me to try again!")
+                except (json.JSONDecodeError, KeyError):
+                    # Fallback to original string matching for non-structured responses
+                    if "Generated seed image" in response or "Using your photo" in response:
+                        seed_status = asyncio.run(
+                            st.session_state.agent.session_manager.get_seed_approval_status(st.session_state.session_id)
+                        )
+                        if seed_status["seed_generated"] and seed_status["seed_path"]:
+                            import os
+                            if os.path.exists(seed_status["seed_path"]):
+                                st.write("**Here's the character image I created:**")
+                                st.image(seed_status["seed_path"], caption="Character Seed Image", width=300)
+                                st.write("Does this look like your child? Please let me know if I should proceed or if you'd like me to try again!")
 
                 st.session_state.messages.append(
                     {"role": "assistant", "content": response}

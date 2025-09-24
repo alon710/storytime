@@ -1,8 +1,15 @@
 from PIL import Image
 import google.genai as genai
 import asyncio
-from app.tools.base import BaseTool
+from app.tools.base import BaseTool, BaseToolResponse
 from app.tools.narrator import StoryPage
+from typing import Type
+from pydantic import Field
+
+
+class IllustratorToolResponse(BaseToolResponse):
+    illustration_path: str | None = Field(None, description="Path to the generated illustration")
+    page_title: str | None = Field(None, description="Title of the illustrated page")
 
 
 class IllustratorTool(BaseTool):
@@ -21,6 +28,10 @@ Maintain character consistency using seed images and ensure visual continuity ac
 Your role is to create beautiful, consistent illustrations that bring stories to life.
 Maintain character consistency using seed images and ensure visual continuity across pages."""
         )
+
+    @property
+    def response_model(self) -> Type[IllustratorToolResponse]:
+        return IllustratorToolResponse
 
     async def _arun(self, **kwargs) -> str:
         try:

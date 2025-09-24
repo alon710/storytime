@@ -7,7 +7,15 @@ else:
         from PIL import Image
     except ImportError:
         Image = None
-from app.tools.base import BaseTool
+from app.tools.base import BaseTool, BaseToolResponse
+from typing import Type
+from pydantic import Field
+
+
+class SeedToolResponse(BaseToolResponse):
+    seed_image_path: str | None = Field(None, description="Path to the generated seed image")
+    requires_approval: bool = Field(True, description="Whether the seed image requires parent approval")
+    child_name: str | None = Field(None, description="Name of the child")
 
 
 class SeedTool(BaseTool):
@@ -21,9 +29,12 @@ class SeedTool(BaseTool):
             model=model,
             name="use_reference_as_seed",
             description="Uses uploaded reference images as seed images for story character consistency",
-            system_prompt="""You are an expert AI artist specializing in children's book characters. Your task is to generate a single image of a child with two distinct poses: a front-facing view on the left and a side profile view on the right. The final image should be suitable for use as a foundational "seed image" for future illustrations.
-The image must be a cohesive illustration. Maintain a consistent art style, lighting, and proportionality across both poses. The child's facial features, hairstyle, and clothing must be faithfully preserved based on the provided reference image. The background should be plain to maintain focus on the character.""",
+            system_prompt="Uses the uploaded reference photo of the child as the seed image for story consistency.",
         )
+
+    @property
+    def response_model(self) -> Type[SeedToolResponse]:
+        return SeedToolResponse
 
     async def _arun(self, **kwargs) -> str:
         try:
@@ -104,15 +115,35 @@ The image must be a cohesive illustration. Maintain a consistent art style, ligh
                 session_manager = SessionManager()
                 await session_manager.store_seed_image(session_id, seed_path)
 
-                return f"Using your photo of {entity_type} as the seed image. Please review and approve before proceeding with the story."
+                # Return structured response
+                response = SeedToolResponse(
+                    success=True,
+                    message=f"Using your photo of {child_name} as the seed image. Please review and approve before proceeding with the story.",
+                    seed_image_path=seed_path,
+                    requires_approval=True,
+                    child_name=child_name
+                )
+                return response.model_dump_json()
 
-            return (
-                f"Generated seed image for {entity_type}"
-                if result
-                else f"Failed to generate seed image for {entity_type}"
+            # Return failure response
+            response = SeedToolResponse(
+                success=False,
+                message=f"Failed to process seed image for {entity_type}",
+                seed_image_path=None,
+                requires_approval=False,
+                child_name=child_name if 'child_name' in locals() else entity_type
             )
+            return response.model_dump_json()
         except Exception as e:
-            return f"Error generating seed image: {str(e)}"
+            # Return structured error response
+            response = SeedToolResponse(
+                success=False,
+                message=f"Error processing seed image: {str(e)}",
+                seed_image_path=None,
+                requires_approval=False,
+                child_name=None
+            )
+            return response.model_dump_json()
 
     async def execute(
         self,

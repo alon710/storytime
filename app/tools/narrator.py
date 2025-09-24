@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import google.genai as genai
 import asyncio
-from app.tools.base import BaseTool
+from app.tools.base import BaseTool, BaseToolResponse
+from typing import Type
 
 
 class StoryPage(BaseModel):
@@ -13,6 +14,11 @@ class StoryPage(BaseModel):
 class StoryBook(BaseModel):
     book_title: str
     pages: list[StoryPage]
+
+
+class NarratorToolResponse(BaseToolResponse):
+    story_content: dict | None = Field(None, description="Generated story content")
+    pages_count: int = Field(0, description="Number of pages generated")
 
 
 class NarratorTool(BaseTool):
@@ -31,6 +37,10 @@ Focus on positive messaging, character development, and vivid scene descriptions
 Your role is to craft engaging, age-appropriate stories that help children overcome challenges and learn valuable lessons.
 Focus on positive messaging, character development, and vivid scene descriptions that translate well to illustrations."""
         )
+
+    @property
+    def response_model(self) -> Type[NarratorToolResponse]:
+        return NarratorToolResponse
 
     async def _arun(self, **kwargs) -> str:
         try:
