@@ -92,6 +92,7 @@ IMPORTANT:
 - Only generate seed when ALL info including photos is collected
 - Only proceed to story generation after seed is approved
 - Check session data for what's been collected and approval status
+- ALWAYS pass the session_id when calling any tool so it can access stored images and data
 
 Always check the session data to see what information has already been collected and approval status before asking questions."""
 
@@ -101,12 +102,6 @@ Always check the session data to see what information has already been collected
         try:
             await self.session_manager.add_chat_message(
                 session_id, "human", user_message
-            )
-
-            session_data = await self.session_manager.get_session_data(session_id)
-            missing_fields = await self.session_manager.get_missing_fields(session_id)
-            seed_status = await self.session_manager.get_seed_approval_status(
-                session_id
             )
 
             # Store reference images in session if provided
@@ -120,6 +115,16 @@ Always check the session data to see what information has already been collected
                     count=len(reference_images),
                 )
 
+            # Get updated session data and missing fields AFTER storing images
+            session_data = await self.session_manager.get_session_data(session_id)
+            missing_fields = await self.session_manager.get_missing_fields(session_id)
+            seed_status = await self.session_manager.get_seed_approval_status(
+                session_id
+            )
+
+            # Get ALL stored reference images from database
+            all_stored_images = await self.session_manager.get_reference_images(session_id)
+
             chat_history = await self.session_manager.get_chat_history(session_id)
             history_messages = []
             for msg in chat_history[:-1]:  # Exclude the current message
@@ -129,12 +134,12 @@ Always check the session data to see what information has already been collected
                     history_messages.append(AIMessage(content=msg.content))
 
             context = self._build_context(
-                session_data, missing_fields, reference_images, seed_status
+                session_data, missing_fields, all_stored_images, seed_status
             )
 
             response = await self.executor.ainvoke(
                 {
-                    "input": f"{context}\n\nUser message: {user_message}",
+                    "input": f"{context}\n\nSession ID: {session_id}\n\nUser message: {user_message}",
                     "chat_history": history_messages,
                 }
             )
@@ -184,6 +189,9 @@ Always check the session data to see what information has already been collected
             )
             context_parts.append(
                 "- Use these images when generating seed images for more personalized results"
+            )
+            context_parts.append(
+                "- ✅ CHILD PHOTOS UPLOADED - Reference images requirement met"
             )
 
         if seed_status:

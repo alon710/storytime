@@ -141,6 +141,7 @@ class SessionManager:
     async def store_reference_images(self, session_id: str, reference_images: list) -> None:
         import pickle
         import base64
+        from sqlalchemy.orm import attributes
 
         try:
             async with self.async_session() as db:
@@ -151,7 +152,9 @@ class SessionManager:
 
                 if session_data:
                     serialized_images = base64.b64encode(pickle.dumps(reference_images)).decode('utf-8')
+                    # Update the dictionary and mark it as modified for SQLAlchemy
                     session_data.collected_fields["reference_images"] = serialized_images
+                    attributes.flag_modified(session_data, "collected_fields")
                     await db.commit()
                     self.logger.info("Stored reference images", session_id=session_id, count=len(reference_images))
 
