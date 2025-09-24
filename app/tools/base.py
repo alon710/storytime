@@ -16,13 +16,16 @@ class BaseTool(LangChainBaseTool, ABC):
     name: str = Field(..., description="Tool name")
     description: str = Field(..., description="Tool description")
     system_prompt: str = Field(..., description="System prompt for this tool")
-    model: str = Field(..., description="Model to use for this tool")
 
     model_config = {"extra": "allow"}
 
-    def __init__(self, model: str, **kwargs):
-        super().__init__(model=model, **kwargs)
-        self.logger = logger.bind(tool=self.__class__.__name__, model=model)
+    def __init__(self, **kwargs):
+        self.logger = logger.bind(tool=self.__class__.__name__, model=self.model)
+
+    @property
+    @abstractmethod
+    def model(self) -> str:
+        raise NotImplementedError("Each tool must define a 'model' property")
 
     @property
     @abstractmethod
@@ -47,4 +50,6 @@ class BaseTool(LangChainBaseTool, ABC):
         self.logger.info("Operation completed", operation=operation, **context)
 
     def log_failure(self, operation: str, error: str, **context) -> None:
-        self.logger.error("Operation failed", operation=operation, error=error, **context)
+        self.logger.error(
+            "Operation failed", operation=operation, error=error, **context
+        )

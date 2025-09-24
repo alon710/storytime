@@ -11,8 +11,14 @@ class Session(Base):
     __tablename__ = "sessions"
 
     session_id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
     status: Mapped[str] = mapped_column(String(50), default="active")
 
 
@@ -24,7 +30,7 @@ class SessionData(Base):
     child_name: Mapped[str | None] = mapped_column(String(100))
     child_age: Mapped[int | None] = mapped_column(Integer)
     child_gender: Mapped[str | None] = mapped_column(String(20))
-    challenge_theme: Mapped[str | None] = mapped_column(Text)
+    challenge: Mapped[str | None] = mapped_column(Text)
     seed_image_generated: Mapped[bool] = mapped_column(default=False)
     seed_image_approved: Mapped[bool] = mapped_column(default=False)
     seed_image_path: Mapped[str | None] = mapped_column(String(500))
@@ -39,7 +45,9 @@ class ChatHistory(Base):
     session_id: Mapped[str] = mapped_column(String(36), index=True)
     role: Mapped[str] = mapped_column(String(20))
     content: Mapped[str] = mapped_column(Text)
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
 
 
 class GeneratedContent(Base):
@@ -50,4 +58,6 @@ class GeneratedContent(Base):
     story_json: Mapped[dict | None] = mapped_column(JSON)
     image_paths: Mapped[list | None] = mapped_column(JSON)
     session_directory: Mapped[str | None] = mapped_column(String(500))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )

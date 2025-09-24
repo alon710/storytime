@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings
 from pathlib import Path
-from pydantic import Field
+from pydantic import Field, SecretStr
 
 
 class Settings(BaseSettings):
@@ -10,8 +10,8 @@ class Settings(BaseSettings):
     illustrator_model: str = "gemini-2.5-flash-image-preview"
     storage_backend: str = "local"
 
-    openai_api_key: str | None = Field(default=None, env="OPENAI_API_KEY")
-    google_api_key: str | None = Field(default=None, env="GOOGLE_API_KEY")
+    openai_api_key: SecretStr | None = Field(default=None, env="OPENAI_API_KEY")
+    google_api_key: SecretStr | None = Field(default=None, env="GOOGLE_API_KEY")
 
     session_storage_path: str = "./sessions"
 

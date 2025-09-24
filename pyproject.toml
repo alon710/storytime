@@ -29,6 +29,7 @@ dependencies = [
     # Database
     "sqlalchemy>=2.0.0",
     "aiosqlite>=0.20.0",
+    "simpleaichat>=0.2.2",
 ]
 
 [dependency-groups]

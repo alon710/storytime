@@ -2,6 +2,7 @@ from langchain.agents import AgentExecutor, create_openai_functions_agent
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage
+from pydantic import SecretStr
 import structlog
 
 from app.settings import settings
@@ -22,17 +23,17 @@ class StoryTimeConversationalAgent:
             model_name=settings.main_agent_model,
             temperature=0.7,
             streaming=True,
-            api_key=settings.openai_api_key,
+            openai_api_key=settings.openai_api_key,
         )
 
         self.tools = [
-            SeedTool(settings.seed_model),
-            NarratorTool(settings.narrator_model),
-            IllustratorTool(settings.illustrator_model),
+            SeedTool(),
+            NarratorTool(),
+            IllustratorTool(),
         ]
 
         self.prompt = ChatPromptTemplate.from_messages(
-            [
+            messages=[
                 ("system", self._get_system_prompt()),
                 MessagesPlaceholder(variable_name="chat_history"),
                 ("human", "{input}"),
@@ -40,7 +41,12 @@ class StoryTimeConversationalAgent:
             ]
         )
 
-        self.agent = create_openai_functions_agent(self.llm, self.tools, self.prompt)
+        self.agent = create_openai_functions_agent(
+            llm=self.llm,
+            tools=self.tools,
+            prompt=self.prompt,
+        )
+
         self.executor = AgentExecutor(agent=self.agent, tools=self.tools, verbose=True)
 
     async def initialize(self) -> None:
@@ -123,7 +129,9 @@ Always check the session data to see what information has already been collected
             )
 
             # Get ALL stored reference images from database
-            all_stored_images = await self.session_manager.get_reference_images(session_id)
+            all_stored_images = await self.session_manager.get_reference_images(
+                session_id
+            )
 
             chat_history = await self.session_manager.get_chat_history(session_id)
             history_messages = []

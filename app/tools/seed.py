@@ -2,6 +2,7 @@ from app.tools.base import BaseTool, BaseToolResponse
 from typing import Type
 from pydantic import Field
 from PIL import Image
+from app.settings import settings
 
 
 class SeedToolResponse(BaseToolResponse):
@@ -15,14 +16,15 @@ class SeedToolResponse(BaseToolResponse):
 
 
 class SeedTool(BaseTool):
+    model: str = settings.seed_model
     name: str = "use_reference_as_seed"
     description: str = (
         "Uses uploaded reference images as seed images for story character consistency"
     )
 
-    def __init__(self, model: str):
+    def __init__(self):
         super().__init__(
-            model=model,
+            model=self.model,
             name="use_reference_as_seed",
             description="Uses uploaded reference images as seed images for story character consistency",
             system_prompt="You are an expert AI artist specializing in children's book characters. Your task is to generate a single image of a child with two distinct poses: a front-facing view on the left and a side profile view on the right. The final image should be suitable for use as a foundational \"seed image\" for future illustrations. The image must be a cohesive illustration. Maintain a consistent art style, lighting, and proportionality across both poses. The child's facial features, hairstyle, and clothing must be faithfully preserved based on the provided reference image. The background should be plain to maintain focus on the character. In a retro mid-century children’s book illustration style, in the spirit of Mary Blair and classic 1950s picture books. The image should faithfully preserve the child’s facial features, hairstyle, clothing, and proportions from the reference photo, ensuring consistency across poses. Stylized flat shapes, bold geometric forms, painterly textures, and a pastel-rich vintage color palette give the illustration a nostalgic feel. Plain, simple background for clarity.",
@@ -94,7 +96,8 @@ class SeedTool(BaseTool):
                         if session_match:
                             session_id = session_match.group(1)
                             self.logger.info(
-                                "Extracted session_id from kwargs", session_id=session_id
+                                "Extracted session_id from kwargs",
+                                session_id=session_id,
                             )
 
             # Try to get reference images if session_id is available
@@ -112,8 +115,14 @@ class SeedTool(BaseTool):
                     count=len(reference_images) if reference_images else 0,
                 )
 
+            # Pass child details to execute method
             result = await self.execute(
-                entity_type, entity_description, reference_images
+                entity_type,
+                entity_description,
+                reference_images,
+                child_name if "child_name" in locals() else entity_type,
+                age if "age" in locals() else 4,
+                gender if "gender" in locals() else "child",
             )
 
             # Save seed image and update session if successful
@@ -172,6 +181,9 @@ class SeedTool(BaseTool):
         entity_type: str,
         entity_description: str,
         reference_images: list[Image.Image] | None = None,
+        child_name: str = "child",
+        age: int = 4,
+        gender: str = "child",
     ) -> Image.Image | None:
         self.log_start("seed_generation", entity_type=entity_type)
 
@@ -191,19 +203,23 @@ class SeedTool(BaseTool):
 
             client = genai.Client(api_key=settings.google_api_key)
 
-            # Build the generation prompt combining system prompt with entity info
+            # Build the generation prompt combining system prompt with child details
             generation_prompt = f"""
 {self.system_prompt}
 
-Entity details:
+Child details:
+- Name: {child_name}
+- Age: {age} years old
+- Gender: {gender}
 - Type: {entity_type}
 - Description: {entity_description}
 
-Please generate a seed image showing this child in two poses side by side:
+Please generate a seed image showing {child_name} (age {age}) in two poses side by side:
 - Left side: front-facing view
 - Right side: side profile view
 
-Use the reference image provided to maintain accurate facial features, hair, and appearance.
+IMPORTANT: The child should appear to be {age} years old based on their facial features, body proportions, and overall appearance. Use the reference image provided to maintain accurate facial features, hair, and appearance while ensuring the age representation is correct for a {age}-year-old {gender}.
+
 The background should be plain and the art style should be consistent between both poses.
 """
 

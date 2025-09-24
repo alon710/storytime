@@ -4,11 +4,11 @@ from app.agent import StoryTimeConversationalAgent
 
 st.set_page_config(
     page_title="StoryTime",
-    page_icon="📚",
+    page_icon="👶",
     layout="centered",
 )
 
-st.title("📚 StoryTime")
+st.title("StoryTime")
 st.caption("Create personalized children's books with AI")
 
 
@@ -46,7 +46,7 @@ for message in st.session_state.messages:
 
 if user_input := st.chat_input("Tell me about your child...", accept_file="multiple"):
     # Handle ChatInputValue object from Streamlit
-    if hasattr(user_input, 'text') and hasattr(user_input, 'files'):
+    if hasattr(user_input, "text") and hasattr(user_input, "files"):
         # ChatInputValue object from accept_file mode
         prompt = user_input.text
         uploaded_files = user_input.files
@@ -60,7 +60,9 @@ if user_input := st.chat_input("Tell me about your child...", accept_file="multi
         uploaded_files = []
 
     # Display user message
-    st.session_state.messages.append({"role": "user", "content": prompt, "files": uploaded_files})
+    st.session_state.messages.append(
+        {"role": "user", "content": prompt, "files": uploaded_files}
+    )
     with st.chat_message("user"):
         st.markdown(prompt)
         # Display uploaded images
@@ -68,7 +70,7 @@ if user_input := st.chat_input("Tell me about your child...", accept_file="multi
             st.write(f"📎 {len(uploaded_files)} image(s) uploaded:")
             for i, file in enumerate(uploaded_files):
                 if file.type.startswith("image/"):
-                    st.image(file, caption=f"Image {i+1}: {file.name}", width=200)
+                    st.image(file, caption=f"Image {i + 1}: {file.name}", width=200)
 
     # Store images in session state for the agent
     if "uploaded_images" not in st.session_state:
@@ -78,33 +80,37 @@ if user_input := st.chat_input("Tell me about your child...", accept_file="multi
         # Convert uploaded files to PIL Images and store them
         from PIL import Image
         import io
+
         for file in uploaded_files:
             if file.type.startswith("image/"):
                 image = Image.open(io.BytesIO(file.read()))
-                st.session_state.uploaded_images.append({
-                    "image": image,
-                    "name": file.name,
-                    "type": file.type
-                })
+                st.session_state.uploaded_images.append(
+                    {"image": image, "name": file.name, "type": file.type}
+                )
 
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             try:
                 # Pass images to the agent if available
-                images_for_agent = [img["image"] for img in st.session_state.uploaded_images] if st.session_state.uploaded_images else None
+                images_for_agent = (
+                    [img["image"] for img in st.session_state.uploaded_images]
+                    if st.session_state.uploaded_images
+                    else None
+                )
 
                 response = asyncio.run(
                     st.session_state.agent.chat(
                         st.session_state.session_id,
                         prompt,
-                        reference_images=images_for_agent
+                        reference_images=images_for_agent,
                     )
                 )
 
                 # Clean up response to remove broken markdown images
                 import re
-                clean_response = re.sub(r'!\[.*?\]\(sandbox:.*?\)', '', response)
-                clean_response = re.sub(r'!\[.*?\]\(/var/.*?\)', '', clean_response)
+
+                clean_response = re.sub(r"!\[.*?\]\(sandbox:.*?\)", "", response)
+                clean_response = re.sub(r"!\[.*?\]\(/var/.*?\)", "", clean_response)
                 clean_response = clean_response.strip()
 
                 # Display the cleaned response
@@ -112,11 +118,14 @@ if user_input := st.chat_input("Tell me about your child...", accept_file="multi
 
                 # Check if a seed image was generated and display it
                 seed_status = asyncio.run(
-                    st.session_state.agent.session_manager.get_seed_approval_status(st.session_state.session_id)
+                    st.session_state.agent.session_manager.get_seed_approval_status(
+                        st.session_state.session_id
+                    )
                 )
 
                 if seed_status["seed_generated"] and seed_status["seed_path"]:
                     import os
+
                     seed_path = seed_status["seed_path"]
 
                     if os.path.exists(seed_path):
@@ -126,8 +135,12 @@ if user_input := st.chat_input("Tell me about your child...", accept_file="multi
 
                         if seed_path not in st.session_state.displayed_seed_images:
                             st.write("**Here's the character seed image:**")
-                            st.image(seed_path, caption="Character Seed Image", width=300)
-                            st.write("Does this look like your child? Please let me know if I should proceed or if you'd like me to try again!")
+                            st.image(
+                                seed_path, caption="Character Seed Image", width=300
+                            )
+                            st.write(
+                                "Does this look like your child? Please let me know if I should proceed or if you'd like me to try again!"
+                            )
                             st.session_state.displayed_seed_images.add(seed_path)
 
                 st.session_state.messages.append(

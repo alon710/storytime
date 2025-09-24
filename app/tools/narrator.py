@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 import google.genai as genai
 import asyncio
+from app.settings import settings
 from app.tools.base import BaseTool, BaseToolResponse
 from typing import Type
 
@@ -28,14 +29,14 @@ class NarratorTool(BaseTool):
 Your role is to craft engaging, age-appropriate stories that help children overcome challenges and learn valuable lessons.
 Focus on positive messaging, character development, and vivid scene descriptions that translate well to illustrations."""
 
-    def __init__(self, model: str):
+    def __init__(self):
         super().__init__(
-            model=model,
+            model=settings.narrator_model,
             name="generate_story",
             description="Creates personalized children's stories with structured pages including titles, text, and scene descriptions for illustrations",
             system_prompt="""You are a creative children's book author specializing in personalized storytelling.
 Your role is to craft engaging, age-appropriate stories that help children overcome challenges and learn valuable lessons.
-Focus on positive messaging, character development, and vivid scene descriptions that translate well to illustrations."""
+Focus on positive messaging, character development, and vivid scene descriptions that translate well to illustrations.""",
         )
 
     @property
@@ -55,42 +56,55 @@ Focus on positive messaging, character development, and vivid scene descriptions
                 child_name = kwargs.get("child_name", "child")
                 child_age = int(kwargs.get("child_age", 4))
                 child_gender = kwargs.get("child_gender", "child")
-                challenge_theme = kwargs.get("challenge_theme", "learning something new")
+                challenge_theme = kwargs.get(
+                    "challenge_theme", "learning something new"
+                )
 
-            result = await self.execute(child_name, child_age, child_gender, challenge_theme)
-            return f"Generated story: {result.book_title}" if result else "Failed to generate story"
+            result = await self.execute(
+                child_name, child_age, child_gender, challenge_theme
+            )
+            return (
+                f"Generated story: {result.book_title}"
+                if result
+                else "Failed to generate story"
+            )
         except Exception as e:
             return f"Error generating story: {str(e)}"
+
     async def execute(
-        self,
-        child_name: str,
-        child_age: int,
-        child_gender: str,
-        challenge_theme: str
+        self, child_name: str, child_age: int, child_gender: str, challenge_theme: str
     ) -> StoryBook | None:
         self.log_start("story_generation", child_name=child_name, theme=challenge_theme)
 
         try:
-            prompt = self._build_story_prompt(child_name, child_age, child_gender, challenge_theme)
+            prompt = self._build_story_prompt(
+                child_name, child_age, child_gender, challenge_theme
+            )
 
             from app.settings import settings
+
             client = genai.Client(api_key=settings.google_api_key)
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(
                 None,
                 lambda: client.models.generate_content(
-                    model=self.model,
-                    contents=prompt
-                )
+                    model=self.model, contents=prompt
+                ),
             )
 
             story_book = self._extract_story_from_response(response)
 
             if story_book:
-                self.log_success("story_generation", book_title=story_book.book_title, pages_count=len(story_book.pages))
+                self.log_success(
+                    "story_generation",
+                    book_title=story_book.book_title,
+                    pages_count=len(story_book.pages),
+                )
                 return story_book
             else:
-                self.log_failure("story_generation", error="Failed to parse story response")
+                self.log_failure(
+                    "story_generation", error="Failed to parse story response"
+                )
                 return None
 
         except Exception as e:
@@ -125,8 +139,9 @@ Please respond with a JSON object in this exact format:
 
     def _extract_story_from_response(self, response) -> StoryBook | None:
         try:
-            if hasattr(response, 'text'):
+            if hasattr(response, "text"):
                 import json
+
                 story_data = json.loads(response.text)
                 return StoryBook(**story_data)
             return None
