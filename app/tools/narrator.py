@@ -32,9 +32,25 @@ Your role is to craft engaging, age-appropriate stories that help children overc
 Focus on positive messaging, character development, and vivid scene descriptions that translate well to illustrations."""
         )
 
-    async def _arun(self, child_name: str, child_age: str, child_gender: str, challenge_theme: str) -> str:
-        result = await self.execute(child_name, int(child_age), child_gender, challenge_theme)
-        return f"Generated story: {result.book_title}" if result else "Failed to generate story"
+    async def _arun(self, **kwargs) -> str:
+        try:
+            # Handle different argument formats that LangChain might send
+            if "args" in kwargs and isinstance(kwargs["args"], list) and kwargs["args"]:
+                args = kwargs["args"][0] if kwargs["args"] else {}
+                child_name = args.get("name", "child")
+                child_age = int(args.get("age", 4))
+                child_gender = args.get("gender", "child")
+                challenge_theme = args.get("challenge", "learning something new")
+            else:
+                child_name = kwargs.get("child_name", "child")
+                child_age = int(kwargs.get("child_age", 4))
+                child_gender = kwargs.get("child_gender", "child")
+                challenge_theme = kwargs.get("challenge_theme", "learning something new")
+
+            result = await self.execute(child_name, child_age, child_gender, challenge_theme)
+            return f"Generated story: {result.book_title}" if result else "Failed to generate story"
+        except Exception as e:
+            return f"Error generating story: {str(e)}"
     async def execute(
         self,
         child_name: str,

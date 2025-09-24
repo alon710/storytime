@@ -16,3 +16,4 @@ wheels/
 htmlcov/
 .tox/
 coverage.*
+*.db

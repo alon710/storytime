@@ -29,9 +29,23 @@ Your role is to create seed images that establish consistent character appearanc
 Focus on warm, friendly designs suitable for ages 3-8 with clear, recognizable features that can be maintained across multiple story pages."""
         )
 
-    async def _arun(self, entity_type: str, entity_description: str, reference_images: str | None = None) -> str:
-        result = await self.execute(entity_type, entity_description, reference_images)
-        return f"Generated seed image for {entity_type}" if result else f"Failed to generate seed image for {entity_type}"
+    async def _arun(self, **kwargs) -> str:
+        try:
+            # Handle different argument formats that LangChain might send
+            if "args" in kwargs and isinstance(kwargs["args"], list) and kwargs["args"]:
+                # LangChain passed args as a list
+                args = kwargs["args"][0] if kwargs["args"] else {}
+                entity_type = args.get("name", "child")
+                entity_description = f"{args.get('age', 4)}-year-old {args.get('gender', 'child')} named {args.get('name', 'child')}"
+            else:
+                # Direct keyword arguments
+                entity_type = kwargs.get("entity_type", "child")
+                entity_description = kwargs.get("entity_description", "A friendly child character")
+
+            result = await self.execute(entity_type, entity_description, None)
+            return f"Generated seed image for {entity_type}" if result else f"Failed to generate seed image for {entity_type}"
+        except Exception as e:
+            return f"Error generating seed image: {str(e)}"
     async def execute(
         self,
         entity_type: str,
