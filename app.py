@@ -103,7 +103,7 @@ if user_input := st.chat_input("Tell me about your child...", accept_file="multi
                 st.markdown(response)
 
                 # Check if a seed image was generated and display it
-                if "Generated seed image" in response:
+                if "Generated seed image" in response or "Using your photo" in response:
                     seed_status = asyncio.run(
                         st.session_state.agent.session_manager.get_seed_approval_status(st.session_state.session_id)
                     )
