@@ -52,6 +52,23 @@ Focus on warm, friendly designs suitable for ages 3-8 with clear, recognizable f
                 reference_images = await session_manager.get_reference_images(session_id)
 
             result = await self.execute(entity_type, entity_description, reference_images)
+
+            # Save seed image and update session if successful
+            if result and session_id:
+                import os
+                import tempfile
+
+                # Save seed image temporarily
+                temp_dir = tempfile.mkdtemp()
+                seed_path = os.path.join(temp_dir, f"seed_{entity_type}_{session_id}.png")
+                result.save(seed_path)
+
+                # Update session with seed image
+                session_manager = SessionManager()
+                await session_manager.store_seed_image(session_id, seed_path)
+
+                return f"Generated seed image for {entity_type}. Please review and approve before proceeding with the story."
+
             return f"Generated seed image for {entity_type}" if result else f"Failed to generate seed image for {entity_type}"
         except Exception as e:
             return f"Error generating seed image: {str(e)}"

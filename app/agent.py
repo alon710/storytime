@@ -22,7 +22,7 @@ class StoryTimeConversationalAgent:
             model_name=settings.main_agent_model,
             temperature=0.7,
             streaming=True,
-            api_key=settings.openai_api_key
+            api_key=settings.openai_api_key,
         )
 
         self.tools = [
@@ -31,12 +31,14 @@ class StoryTimeConversationalAgent:
             IllustratorTool(settings.illustrator_model),
         ]
 
-        self.prompt = ChatPromptTemplate.from_messages([
-            ("system", self._get_system_prompt()),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{input}"),
-            MessagesPlaceholder(variable_name="agent_scratchpad"),
-        ])
+        self.prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", self._get_system_prompt()),
+                MessagesPlaceholder(variable_name="chat_history"),
+                ("human", "{input}"),
+                MessagesPlaceholder(variable_name="agent_scratchpad"),
+            ]
+        )
 
         self.agent = create_openai_functions_agent(self.llm, self.tools, self.prompt)
         self.executor = AgentExecutor(agent=self.agent, tools=self.tools, verbose=True)
@@ -50,48 +52,73 @@ class StoryTimeConversationalAgent:
 
 Your role is to:
 1. Have natural conversations with users to collect information about their child
-2. Gather the following required information:
+2. Gather the following REQUIRED information:
    - Child's name
-   - Child's age (3-8 years old)
+   - Child's age
    - Child's gender
    - Challenge or theme for the story (what the child is struggling with or wants to learn)
+   - Reference images of the child (REQUIRED - at least one clear photo)
 
-3. REFERENCE IMAGES:
-   - If users mention multiple characters (child + doll/pet/toy), encourage them to upload photos
-   - Reference images help create more personalized and accurate illustrations
-   - When images are available, acknowledge them warmly and explain how they'll enhance the story
+3. REFERENCE IMAGES (REQUIRED):
+   - At least one clear photo of the child is REQUIRED before proceeding
+   - Encourage parents to upload the best photo of their child's face
+   - Explain that this helps create accurate, personalized illustrations
+   - If they mention toys, dolls, pets, suggest uploading those photos too for extra characters
 
-4. When you have ALL required information, use your tools to:
-   - Generate seed images for characters (using reference images if available)
-   - Create the personalized story
-   - Generate illustrations
-   - Save everything
+4. TWO-PHASE WORKFLOW:
+
+   PHASE 1: Information Collection + Seed Generation
+   - When you have ALL required info including child's photo, generate a seed image
+   - Show the generated seed image to the parent
+   - Ask: "Does this look like [child's name]? Should I proceed with creating the story?"
+   - DO NOT proceed to story generation until parent approves
+
+   PHASE 2: Story Generation (ONLY after seed approval)
+   - If parent approves seed: proceed with story creation
+   - If parent rejects seed: regenerate with their feedback
+   - Allow parents to request adjustments to the seed image
 
 CONVERSATION GUIDELINES:
 - Be warm, friendly, and encouraging
 - Ask one question at a time
 - Validate information naturally (e.g., "So Emma is 5 years old, is that right?")
-- If information is missing or unclear, ask follow-up questions
-- Keep track of what you've learned in each session
-- When ready to generate, explain what you're doing
-- If users mention toys, dolls, pets, or other characters, suggest uploading reference photos
+- ALWAYS require at least one photo of the child before proceeding
+- When ready for seed generation, explain what you're doing
+- Show seed image and wait for approval before story generation
+- Handle approval/rejection responses naturally
 
-IMPORTANT: Only call tools when you have collected ALL required information from the user.
-If any information is missing, continue the conversation to gather it naturally.
+IMPORTANT:
+- Reference images of the child are MANDATORY (not optional)
+- Only generate seed when ALL info including photos is collected
+- Only proceed to story generation after seed is approved
+- Check session data for what's been collected and approval status
 
-Always check the session data to see what information has already been collected before asking questions."""
+Always check the session data to see what information has already been collected and approval status before asking questions."""
 
-    async def chat(self, session_id: str, user_message: str, reference_images: list | None = None) -> str:
+    async def chat(
+        self, session_id: str, user_message: str, reference_images: list | None = None
+    ) -> str:
         try:
-            await self.session_manager.add_chat_message(session_id, "human", user_message)
+            await self.session_manager.add_chat_message(
+                session_id, "human", user_message
+            )
 
             session_data = await self.session_manager.get_session_data(session_id)
             missing_fields = await self.session_manager.get_missing_fields(session_id)
+            seed_status = await self.session_manager.get_seed_approval_status(
+                session_id
+            )
 
             # Store reference images in session if provided
             if reference_images:
-                await self.session_manager.store_reference_images(session_id, reference_images)
-                self.logger.info("Stored reference images", session_id=session_id, count=len(reference_images))
+                await self.session_manager.store_reference_images(
+                    session_id, reference_images
+                )
+                self.logger.info(
+                    "Stored reference images",
+                    session_id=session_id,
+                    count=len(reference_images),
+                )
 
             chat_history = await self.session_manager.get_chat_history(session_id)
             history_messages = []
@@ -101,26 +128,42 @@ Always check the session data to see what information has already been collected
                 else:
                     history_messages.append(AIMessage(content=msg.content))
 
-            context = self._build_context(session_data, missing_fields, reference_images)
+            context = self._build_context(
+                session_data, missing_fields, reference_images, seed_status
+            )
 
-            response = await self.executor.ainvoke({
-                "input": f"{context}\n\nUser message: {user_message}",
-                "chat_history": history_messages
-            })
+            response = await self.executor.ainvoke(
+                {
+                    "input": f"{context}\n\nUser message: {user_message}",
+                    "chat_history": history_messages,
+                }
+            )
 
             ai_response = response["output"]
 
-            await self.session_manager.add_chat_message(session_id, "assistant", ai_response)
+            await self.session_manager.add_chat_message(
+                session_id, "assistant", ai_response
+            )
 
-            await self._extract_and_update_session_data(session_id, user_message, ai_response)
+            await self._extract_and_update_session_data(
+                session_id, user_message, ai_response
+            )
 
             return ai_response
 
         except Exception as e:
-            self.logger.error("Chat processing failed", error=str(e), session_id=session_id)
+            self.logger.error(
+                "Chat processing failed", error=str(e), session_id=session_id
+            )
             return "I'm sorry, I encountered an error. Could you please try again?"
 
-    def _build_context(self, session_data, missing_fields: list[str], reference_images: list | None = None) -> str:
+    def _build_context(
+        self,
+        session_data,
+        missing_fields: list[str],
+        reference_images: list | None = None,
+        seed_status: dict | None = None,
+    ) -> str:
         context_parts = ["Session Context:"]
 
         if session_data:
@@ -131,45 +174,127 @@ Always check the session data to see what information has already been collected
             if session_data.child_gender:
                 context_parts.append(f"- Child's gender: {session_data.child_gender}")
             if session_data.challenge_theme:
-                context_parts.append(f"- Challenge/theme: {session_data.challenge_theme}")
+                context_parts.append(
+                    f"- Challenge/theme: {session_data.challenge_theme}"
+                )
 
         if reference_images:
-            context_parts.append(f"- 📸 Reference images available: {len(reference_images)} image(s)")
-            context_parts.append("- Use these images when generating seed images for more personalized results")
+            context_parts.append(
+                f"- 📸 Reference images available: {len(reference_images)} image(s)"
+            )
+            context_parts.append(
+                "- Use these images when generating seed images for more personalized results"
+            )
+
+        if seed_status:
+            if seed_status["seed_generated"]:
+                context_parts.append(
+                    "- 🎨 SEED IMAGE GENERATED - Waiting for parent approval"
+                )
+                if seed_status["seed_approved"]:
+                    context_parts.append(
+                        "- ✅ SEED IMAGE APPROVED - Ready to create story!"
+                    )
+                else:
+                    context_parts.append(
+                        "- ⏳ Ask parent: 'Does this look like [child's name]? Should I proceed?'"
+                    )
+            elif not missing_fields:
+                context_parts.append(
+                    "- 🎯 Ready to generate seed image - All info collected!"
+                )
 
         if missing_fields:
-            context_parts.append(f"- Still need to collect: {', '.join(missing_fields)}")
+            context_parts.append(
+                f"- Still need to collect: {', '.join(missing_fields)}"
+            )
+            if "reference_images" in missing_fields:
+                context_parts.append(
+                    "- ⚠️ Child's photo is REQUIRED - ask parent to upload at least one clear photo"
+                )
 
-        if not missing_fields:
-            context_parts.append("- ✅ ALL INFORMATION COLLECTED - Ready to generate story!")
-            if reference_images:
-                context_parts.append("- 🎨 With reference images for enhanced personalization!")
+        # Final status check
+        if not missing_fields and seed_status and seed_status["seed_approved"]:
+            context_parts.append(
+                "- 🚀 ALL REQUIREMENTS MET - Ready for story generation!"
+            )
+        elif not missing_fields and not (seed_status and seed_status["seed_generated"]):
+            context_parts.append(
+                "- 🎨 Generate seed image first, then wait for approval"
+            )
 
         return "\n".join(context_parts)
 
-    async def _extract_and_update_session_data(self, session_id: str, user_message: str, ai_response: str) -> None:
+    async def _extract_and_update_session_data(
+        self, session_id: str, user_message: str, ai_response: str
+    ) -> None:
         import re
 
         updates = {}
 
         if "name" in user_message.lower():
-            name_match = re.search(r'(?:name is|called|i\'?m)\s+([A-Za-z]+)', user_message, re.IGNORECASE)
+            name_match = re.search(
+                r"(?:name is|called|i\'?m)\s+([A-Za-z]+)", user_message, re.IGNORECASE
+            )
             if name_match:
                 updates["child_name"] = name_match.group(1).capitalize()
 
         if "old" in user_message.lower() or "age" in user_message.lower():
-            age_match = re.search(r'\b([3-8])\b', user_message)
+            age_match = re.search(r"\b([3-8])\b", user_message)
             if age_match:
                 updates["child_age"] = int(age_match.group(1))
 
-        gender_words = {"boy": "boy", "girl": "girl", "he": "boy", "she": "girl", "him": "boy", "her": "girl"}
+        gender_words = {
+            "boy": "boy",
+            "girl": "girl",
+            "he": "boy",
+            "she": "girl",
+            "him": "boy",
+            "her": "girl",
+        }
         for word, gender in gender_words.items():
             if word in user_message.lower():
                 updates["child_gender"] = gender
                 break
 
-        if any(word in user_message.lower() for word in ["scared", "afraid", "shy", "angry", "sharing", "bedtime", "potty"]):
+        if any(
+            word in user_message.lower()
+            for word in [
+                "scared",
+                "afraid",
+                "shy",
+                "angry",
+                "sharing",
+                "bedtime",
+                "potty",
+            ]
+        ):
             updates["challenge_theme"] = user_message
+
+        # Handle seed approval responses
+        approval_words = [
+            "yes",
+            "looks good",
+            "approve",
+            "proceed",
+            "perfect",
+            "that's right",
+            "correct",
+        ]
+        rejection_words = [
+            "no",
+            "doesn't look",
+            "wrong",
+            "not right",
+            "try again",
+            "different",
+        ]
+
+        user_lower = user_message.lower()
+        if any(word in user_lower for word in approval_words):
+            await self.session_manager.approve_seed_image(session_id, True)
+        elif any(word in user_lower for word in rejection_words):
+            await self.session_manager.approve_seed_image(session_id, False)
 
         if updates:
             await self.session_manager.update_session_data(session_id, **updates)

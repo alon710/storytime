@@ -120,7 +120,7 @@ class SessionManager:
     async def get_missing_fields(self, session_id: str) -> list[str]:
         session_data = await self.get_session_data(session_id)
         if not session_data:
-            return ["child_name", "child_age", "child_gender", "challenge_theme"]
+            return ["child_name", "child_age", "child_gender", "challenge_theme", "reference_images"]
 
         missing = []
         if not session_data.child_name:
@@ -131,6 +131,10 @@ class SessionManager:
             missing.append("child_gender")
         if not session_data.challenge_theme:
             missing.append("challenge_theme")
+
+        # Check if reference images are required and available
+        if "reference_images" not in session_data.collected_fields:
+            missing.append("reference_images")
 
         return missing
 
@@ -168,3 +172,38 @@ class SessionManager:
             self.logger.error("Failed to retrieve reference images", session_id=session_id, error=str(e))
 
         return None
+
+    async def store_seed_image(self, session_id: str, seed_image_path: str) -> None:
+        async with self.async_session() as db:
+            result = await db.execute(
+                select(SessionData).where(SessionData.session_id == session_id)
+            )
+            session_data = result.scalar_one_or_none()
+
+            if session_data:
+                session_data.seed_image_generated = True
+                session_data.seed_image_path = seed_image_path
+                await db.commit()
+                self.logger.info("Stored seed image", session_id=session_id, image_path=seed_image_path)
+
+    async def approve_seed_image(self, session_id: str, approved: bool) -> None:
+        async with self.async_session() as db:
+            result = await db.execute(
+                select(SessionData).where(SessionData.session_id == session_id)
+            )
+            session_data = result.scalar_one_or_none()
+
+            if session_data:
+                session_data.seed_image_approved = approved
+                await db.commit()
+                self.logger.info("Updated seed approval", session_id=session_id, approved=approved)
+
+    async def get_seed_approval_status(self, session_id: str) -> dict[str, bool | str | None]:
+        session_data = await self.get_session_data(session_id)
+        if session_data:
+            return {
+                "seed_generated": session_data.seed_image_generated,
+                "seed_approved": session_data.seed_image_approved,
+                "seed_path": session_data.seed_image_path
+            }
+        return {"seed_generated": False, "seed_approved": False, "seed_path": None}

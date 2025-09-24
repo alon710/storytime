@@ -25,6 +25,9 @@ class SessionData(Base):
     child_age: Mapped[int | None] = mapped_column(Integer)
     child_gender: Mapped[str | None] = mapped_column(String(20))
     challenge_theme: Mapped[str | None] = mapped_column(Text)
+    seed_image_generated: Mapped[bool] = mapped_column(default=False)
+    seed_image_approved: Mapped[bool] = mapped_column(default=False)
+    seed_image_path: Mapped[str | None] = mapped_column(String(500))
     collected_fields: Mapped[dict] = mapped_column(JSON, default=dict)
     is_complete: Mapped[bool] = mapped_column(default=False)
 

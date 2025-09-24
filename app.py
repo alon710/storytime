@@ -101,6 +101,19 @@ if user_input := st.chat_input("Tell me about your child...", accept_file="multi
                     )
                 )
                 st.markdown(response)
+
+                # Check if a seed image was generated and display it
+                if "Generated seed image" in response:
+                    seed_status = asyncio.run(
+                        st.session_state.agent.session_manager.get_seed_approval_status(st.session_state.session_id)
+                    )
+                    if seed_status["seed_generated"] and seed_status["seed_path"]:
+                        import os
+                        if os.path.exists(seed_status["seed_path"]):
+                            st.write("**Here's the character image I created:**")
+                            st.image(seed_status["seed_path"], caption="Character Seed Image", width=300)
+                            st.write("Does this look like your child? Please let me know if I should proceed or if you'd like me to try again!")
+
                 st.session_state.messages.append(
                     {"role": "assistant", "content": response}
                 )
