@@ -1,170 +1,88 @@
-import asyncio
 import streamlit as st
-from app.agent import StoryTimeConversationalAgent
+import asyncio
+from src.schemas.state import ChatState, Message
+from src.schemas.image import ImageRequest
+from src.schemas.approval import NeedsApproval, Finalized
+from src.agents.conversation_agent import process_request
+from src.settings import settings
 
-st.set_page_config(
-    page_title="StoryTime",
-    page_icon="👶",
-    layout="centered",
-)
-
-st.title("StoryTime")
-st.caption("Create personalized children's books with AI")
+settings = settings
 
 
-@st.cache_resource
-def get_agent():
-    return StoryTimeConversationalAgent()
+def main():
+    st.set_page_config(page_title="Storytime Image Generator", layout="wide")
+    st.title("AI Image Generator")
 
+    if "chat_state" not in st.session_state:
+        st.session_state.chat_state = ChatState()
 
-async def init_agent():
-    agent = get_agent()
-    await agent.initialize()
-    return agent
+    if "session_ended" not in st.session_state:
+        st.session_state.session_ended = False
 
+    chat_state = st.session_state.chat_state
 
-if "agent" not in st.session_state:
-    with st.spinner("Initializing StoryTime..."):
-        st.session_state.agent = asyncio.run(init_agent())
+    for message in chat_state.messages:
+        with st.chat_message(message.role):
+            st.write(message.text)
+            if message.image_path:
+                st.image(message.image_path)
 
-if "session_id" not in st.session_state:
-    st.session_state.session_id = asyncio.run(
-        st.session_state.agent.create_new_session()
-    )
+    if not st.session_state.session_ended:
+        col1, col2, col3 = st.columns(3)
 
-if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {
-            "role": "assistant",
-            "content": "Hi! I'm StoryTime, and I'm here to help create a personalized book for your child! 📖✨\n\nTo get started, could you tell me your child's name?",
-        }
-    ]
+        with col1:
+            uploaded_file = st.file_uploader("Upload seed image", type=["png", "jpg", "jpeg"])
 
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+        with col2:
+            style = st.selectbox("Style", ["photoreal", "watercolor", "comic"])
 
-if user_input := st.chat_input("Tell me about your child...", accept_file="multiple"):
-    # Handle ChatInputValue object from Streamlit
-    if hasattr(user_input, "text") and hasattr(user_input, "files"):
-        # ChatInputValue object from accept_file mode
-        prompt = user_input.text
-        uploaded_files = user_input.files
-    elif isinstance(user_input, dict):
-        # Dict format (fallback)
-        prompt = user_input.get("text", "")
-        uploaded_files = user_input.get("files", [])
-    else:
-        # String format (when no files uploaded)
-        prompt = str(user_input)
-        uploaded_files = []
+        with col3:
+            age = st.number_input("Age", min_value=1, max_value=100, value=25)
 
-    # Display user message
-    st.session_state.messages.append(
-        {"role": "user", "content": prompt, "files": uploaded_files}
-    )
-    with st.chat_message("user"):
-        st.markdown(prompt)
-        # Display uploaded images
-        if uploaded_files:
-            st.write(f"📎 {len(uploaded_files)} image(s) uploaded:")
-            for i, file in enumerate(uploaded_files):
-                if file.type.startswith("image/"):
-                    st.image(file, caption=f"Image {i + 1}: {file.name}", width=200)
+        gender = st.radio("Gender", ["male", "female"])
 
-    # Store images in session state for the agent
-    if "uploaded_images" not in st.session_state:
-        st.session_state.uploaded_images = []
+        user_input = st.chat_input("Enter your message or approval...")
 
-    if uploaded_files:
-        # Convert uploaded files to PIL Images and store them
-        from PIL import Image
-        import io
+        if user_input and uploaded_file:
+            seed_path = f"/tmp/{uploaded_file.name}"
+            with open(seed_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
 
-        for file in uploaded_files:
-            if file.type.startswith("image/"):
-                image = Image.open(io.BytesIO(file.read()))
-                st.session_state.uploaded_images.append(
-                    {"image": image, "name": file.name, "type": file.type}
-                )
+            chat_state.messages.append(Message(role="user", text=user_input))
 
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
+            with st.chat_message("user"):
+                st.write(user_input)
+
+            request = ImageRequest(seed_image_path=seed_path, style=style, age=age, gender=gender)
+
             try:
-                # Pass images to the agent if available
-                images_for_agent = (
-                    [img["image"] for img in st.session_state.uploaded_images]
-                    if st.session_state.uploaded_images
-                    else None
-                )
+                result = asyncio.run(process_request(request, chat_state))
 
-                response = asyncio.run(
-                    st.session_state.agent.chat(
-                        st.session_state.session_id,
-                        prompt,
-                        reference_images=images_for_agent,
+                if isinstance(result, NeedsApproval):
+                    response_text = f"I've generated an image with {result.params_used}. Do you approve?"
+                    chat_state.messages.append(
+                        Message(role="assistant", text=response_text, image_path=result.image_path)
                     )
-                )
 
-                # Clean up response to remove broken markdown images
-                import re
+                    with st.chat_message("assistant"):
+                        st.write(response_text)
+                        st.image(result.image_path)
 
-                clean_response = re.sub(r"!\[.*?\]\(sandbox:.*?\)", "", response)
-                clean_response = re.sub(r"!\[.*?\]\(/var/.*?\)", "", clean_response)
-                clean_response = clean_response.strip()
+                elif isinstance(result, Finalized):
+                    chat_state.messages.append(Message(role="assistant", text=result.message))
 
-                # Display the cleaned response
-                st.markdown(clean_response)
+                    with st.chat_message("assistant"):
+                        st.write(result.message)
 
-                # Check if a seed image was generated and display it
-                seed_status = asyncio.run(
-                    st.session_state.agent.session_manager.get_seed_approval_status(
-                        st.session_state.session_id
-                    )
-                )
+                    st.session_state.session_ended = True
+                    st.rerun()
 
-                if seed_status["seed_generated"] and seed_status["seed_path"]:
-                    import os
+            except Exception as e:
+                st.error(f"Error: {str(e)}")
 
-                    seed_path = seed_status["seed_path"]
+    else:
+        st.success("Conversation has ended. Refresh to start a new session.")
 
-                    if os.path.exists(seed_path):
-                        # Check if we've already shown this image
-                        if "displayed_seed_images" not in st.session_state:
-                            st.session_state.displayed_seed_images = set()
 
-                        if seed_path not in st.session_state.displayed_seed_images:
-                            st.write("**Here's the character seed image:**")
-                            st.image(
-                                seed_path, caption="Character Seed Image", width=300
-                            )
-                            st.write(
-                                "Does this look like your child? Please let me know if I should proceed or if you'd like me to try again!"
-                            )
-                            st.session_state.displayed_seed_images.add(seed_path)
-
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": response}
-                )
-            except Exception:
-                error_msg = "I'm sorry, I encountered an error. Please try again."
-                st.error(error_msg)
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": error_msg}
-                )
-
-with st.sidebar:
-    st.header("Session Info")
-    st.write(f"Session ID: {st.session_state.session_id[:8]}...")
-
-    if st.button("Start New Conversation"):
-        st.session_state.session_id = asyncio.run(
-            st.session_state.agent.create_new_session()
-        )
-        st.session_state.messages = [
-            {
-                "role": "assistant",
-                "content": "Hi! I'm StoryTime, and I'm here to help create a personalized book for your child! 📖✨\n\nTo get started, could you tell me your child's name?",
-            }
-        ]
-        st.rerun()
+if __name__ == "__main__":
+    main()
