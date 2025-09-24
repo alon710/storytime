@@ -7,25 +7,22 @@ else:
         from PIL import Image
     except ImportError:
         Image = None
-import google.genai as genai
-import asyncio
 from app.tools.base import BaseTool
 
 
 class SeedTool(BaseTool):
-    name: str = "generate_seed_image"
-    description: str = "Generates consistent character seed images for story illustrations based on entity descriptions and reference images"
-    system_prompt: str = """You are an expert AI artist specializing in children's book characters. Your task is to generate a single image of a child with two distinct poses: a front-facing view on the left and a side profile view on the right. The final image should be suitable for use as a foundational "seed image" for future illustrations.
-The image must be a cohesive illustration. Maintain a consistent art style, lighting, and proportionality across both poses. The child's facial features, hairstyle, and clothing must be faithfully preserved based on the provided reference image. The background should be plain to maintain focus on the character."""
+    name: str = "use_reference_as_seed"
+    description: str = (
+        "Uses uploaded reference images as seed images for story character consistency"
+    )
 
     def __init__(self, model: str):
         super().__init__(
             model=model,
-            name="generate_seed_image",
-            description="Generates consistent character seed images for story illustrations based on entity descriptions and reference images",
-            system_prompt="""You are an AI artist specializing in children's book character design.
-Your role is to create seed images that establish consistent character appearances for storytelling.
-Focus on warm, friendly designs suitable for ages 3-8 with clear, recognizable features that can be maintained across multiple story pages.""",
+            name="use_reference_as_seed",
+            description="Uses uploaded reference images as seed images for story character consistency",
+            system_prompt="""You are an expert AI artist specializing in children's book characters. Your task is to generate a single image of a child with two distinct poses: a front-facing view on the left and a side profile view on the right. The final image should be suitable for use as a foundational "seed image" for future illustrations.
+The image must be a cohesive illustration. Maintain a consistent art style, lighting, and proportionality across both poses. The child's facial features, hairstyle, and clothing must be faithfully preserved based on the provided reference image. The background should be plain to maintain focus on the character.""",
         )
 
     async def _arun(self, **kwargs) -> str:
@@ -107,7 +104,7 @@ Focus on warm, friendly designs suitable for ages 3-8 with clear, recognizable f
                 session_manager = SessionManager()
                 await session_manager.store_seed_image(session_id, seed_path)
 
-                return f"Generated seed image for {entity_type}. Please review and approve before proceeding with the story."
+                return f"Using your photo of {entity_type} as the seed image. Please review and approve before proceeding with the story."
 
             return (
                 f"Generated seed image for {entity_type}"
@@ -126,96 +123,23 @@ Focus on warm, friendly designs suitable for ages 3-8 with clear, recognizable f
         self.log_start("seed_generation", entity_type=entity_type)
 
         try:
-            prompt = self._build_seed_prompt(entity_type, entity_description)
-
-            from app.settings import settings
-
-            client = genai.Client(api_key=settings.google_api_key)
-
-            loop = asyncio.get_event_loop()
-            if reference_images:
-                response = await loop.run_in_executor(
-                    None,
-                    lambda: client.models.generate_content(
-                        model=self.model, contents=[prompt] + reference_images
-                    ),
+            # Simply use the first reference image as the seed
+            if reference_images and len(reference_images) > 0:
+                seed_image = reference_images[0]
+                self.log_success(
+                    "seed_generation",
+                    entity_type=entity_type,
+                    message="Using reference image as seed",
                 )
-            else:
-                response = await loop.run_in_executor(
-                    None,
-                    lambda: client.models.generate_content(
-                        model=self.model, contents=prompt
-                    ),
-                )
-
-            seed_image = self._extract_image_from_response(response)
-
-            if seed_image:
-                self.log_success("seed_generation", entity_type=entity_type)
                 return seed_image
             else:
                 self.log_failure(
                     "seed_generation",
-                    error="No image generated",
+                    error="No reference images provided",
                     entity_type=entity_type,
                 )
                 return None
 
         except Exception as e:
             self.log_failure("seed_generation", error=str(e), entity_type=entity_type)
-            return None
-
-    def _build_seed_prompt(self, entity_type: str, description: str) -> str:
-        return f"""Generate a seed image for a children's book character.
-
-Entity type: {entity_type}
-Description: {description}
-
-Style requirements:
-- Warm, friendly children's book illustration style
-- Consistent character design suitable for multiple scenes
-- Clear, recognizable features that can be maintained across pages
-- Appropriate for ages 3-8
-
-Please create a high-quality character seed image."""
-
-    def _extract_image_from_response(self, response) -> Image.Image | None:
-        try:
-            self.logger.info(
-                "Extracting image from response", response_type=type(response).__name__
-            )
-
-            # Try different ways to extract image from Gemini response
-            if hasattr(response, "candidates") and response.candidates:
-                candidate = response.candidates[0]
-                if hasattr(candidate, "content") and hasattr(
-                    candidate.content, "parts"
-                ):
-                    for part in candidate.content.parts:
-                        if hasattr(part, "inline_data") and hasattr(
-                            part.inline_data, "data"
-                        ):
-                            # Convert base64 image data to PIL Image
-                            import base64
-                            from io import BytesIO
-
-                            image_data = base64.b64decode(part.inline_data.data)
-                            image = Image.open(BytesIO(image_data))
-                            self.logger.info(
-                                "Successfully extracted image from inline_data"
-                            )
-                            return image
-
-            # Fallback: check if response directly has image attribute
-            if hasattr(response, "image") and response.image:
-                self.logger.info("Found image in response.image")
-                return response.image
-
-            # Log available attributes for debugging
-            self.logger.warning(
-                "Could not extract image", available_attrs=dir(response)
-            )
-            return None
-        except Exception as e:
-            self.logger.error("Error extracting image", error=str(e))
             return None
