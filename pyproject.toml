@@ -12,7 +12,7 @@ dependencies = [
     # Data models and validation
     "pydantic>=2.5.0",
     "pydantic-settings>=2.1.0",
-    # Image processing
+    # Image processing[]
     "pillow>=10.0.0",
     # PDF generation
     "reportlab>=4.0.0",
@@ -22,7 +22,13 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "jinja2>=3.1.6",
     "structlog>=25.4.0",
+    # LangChain and AI agents
     "langchain>=0.3.27",
+    "langchain-openai>=0.3.33",
+    "langchain-community>=0.3.27",
+    # Database
+    "sqlalchemy>=2.0.0",
+    "aiosqlite>=0.20.0",
 ]
 
 [dependency-groups]
