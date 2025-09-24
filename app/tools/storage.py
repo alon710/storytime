@@ -3,15 +3,36 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from PIL import Image
-from .base import BaseTool
+from .base import BaseTool, BaseToolResponse
 from .narrator import StoryBook
+from typing import Type
+from pydantic import Field
+
+
+class StorageToolResponse(BaseToolResponse):
+    session_directory: str | None = Field(None, description="Path to the session storage directory")
+    story_path: str | None = Field(None, description="Path to the saved story file")
+    images_count: int = Field(0, description="Number of images saved")
 
 
 class StorageTool(BaseTool):
     def __init__(self, model: str, storage_path: str = "./sessions"):
-        super().__init__(model)
+        super().__init__(
+            model=model,
+            name="save_story_content",
+            description="Saves story content, images, and seed images to session directory",
+            system_prompt="Saves generated story content and associated images to persistent storage."
+        )
         self.storage_path = Path(storage_path)
         self.storage_path.mkdir(exist_ok=True)
+
+    @property
+    def response_model(self) -> Type[StorageToolResponse]:
+        return StorageToolResponse
+
+    async def _arun(self, **kwargs) -> str:
+        # Implementation would go here for LangChain compatibility
+        return "Storage tool executed"
 
     async def execute(
         self,

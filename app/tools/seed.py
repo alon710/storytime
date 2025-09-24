@@ -13,8 +13,12 @@ from pydantic import Field
 
 
 class SeedToolResponse(BaseToolResponse):
-    seed_image_path: str | None = Field(None, description="Path to the generated seed image")
-    requires_approval: bool = Field(True, description="Whether the seed image requires parent approval")
+    seed_image_path: str | None = Field(
+        None, description="Path to the generated seed image"
+    )
+    requires_approval: bool = Field(
+        True, description="Whether the seed image requires parent approval"
+    )
     child_name: str | None = Field(None, description="Name of the child")
 
 
@@ -29,7 +33,7 @@ class SeedTool(BaseTool):
             model=model,
             name="use_reference_as_seed",
             description="Uses uploaded reference images as seed images for story character consistency",
-            system_prompt="Uses the uploaded reference photo of the child as the seed image for story consistency.",
+            system_prompt="You are an expert AI artist specializing in children's book characters. Your task is to generate a single image of a child with two distinct poses: a front-facing view on the left and a side profile view on the right. The final image should be suitable for use as a foundational \"seed image\" for future illustrations. The image must be a cohesive illustration. Maintain a consistent art style, lighting, and proportionality across both poses. The child's facial features, hairstyle, and clothing must be faithfully preserved based on the provided reference image. The background should be plain to maintain focus on the character.",
         )
 
     @property
@@ -102,26 +106,32 @@ class SeedTool(BaseTool):
             # Save seed image and update session if successful
             if result and session_id:
                 import os
-                import tempfile
+                from pathlib import Path
 
-                # Save seed image temporarily
-                temp_dir = tempfile.mkdtemp()
-                seed_path = os.path.join(
-                    temp_dir, f"seed_{entity_type}_{session_id}.png"
-                )
+                # Create sessions directory in project root
+                project_root = Path(__file__).parent.parent.parent
+                sessions_dir = project_root / "sessions"
+                session_dir = sessions_dir / session_id
+                seeds_dir = session_dir / "seeds"
+
+                # Create directories if they don't exist
+                seeds_dir.mkdir(parents=True, exist_ok=True)
+
+                # Save seed image to project directory
+                seed_path = seeds_dir / f"seed_{entity_type}.png"
                 result.save(seed_path)
 
                 # Update session with seed image
                 session_manager = SessionManager()
-                await session_manager.store_seed_image(session_id, seed_path)
+                await session_manager.store_seed_image(session_id, str(seed_path))
 
                 # Return structured response
                 response = SeedToolResponse(
                     success=True,
                     message=f"Using your photo of {child_name} as the seed image. Please review and approve before proceeding with the story.",
-                    seed_image_path=seed_path,
+                    seed_image_path=str(seed_path),
                     requires_approval=True,
-                    child_name=child_name
+                    child_name=child_name,
                 )
                 return response.model_dump_json()
 
@@ -131,7 +141,7 @@ class SeedTool(BaseTool):
                 message=f"Failed to process seed image for {entity_type}",
                 seed_image_path=None,
                 requires_approval=False,
-                child_name=child_name if 'child_name' in locals() else entity_type
+                child_name=child_name if "child_name" in locals() else entity_type,
             )
             return response.model_dump_json()
         except Exception as e:
@@ -141,7 +151,7 @@ class SeedTool(BaseTool):
                 message=f"Error processing seed image: {str(e)}",
                 seed_image_path=None,
                 requires_approval=False,
-                child_name=None
+                child_name=None,
             )
             return response.model_dump_json()
 
@@ -154,16 +164,7 @@ class SeedTool(BaseTool):
         self.log_start("seed_generation", entity_type=entity_type)
 
         try:
-            # Simply use the first reference image as the seed
-            if reference_images and len(reference_images) > 0:
-                seed_image = reference_images[0]
-                self.log_success(
-                    "seed_generation",
-                    entity_type=entity_type,
-                    message="Using reference image as seed",
-                )
-                return seed_image
-            else:
+            if not reference_images or len(reference_images) == 0:
                 self.log_failure(
                     "seed_generation",
                     error="No reference images provided",
@@ -171,6 +172,81 @@ class SeedTool(BaseTool):
                 )
                 return None
 
+            # Use Gemini to generate a two-pose seed image based on the reference
+            import google.genai as genai
+            import asyncio
+            from app.settings import settings
+
+            client = genai.Client(api_key=settings.google_api_key)
+
+            # Build the generation prompt combining system prompt with entity info
+            generation_prompt = f"""
+{self.system_prompt}
+
+Entity details:
+- Type: {entity_type}
+- Description: {entity_description}
+
+Please generate a seed image showing this child in two poses side by side:
+- Left side: front-facing view
+- Right side: side profile view
+
+Use the reference image provided to maintain accurate facial features, hair, and appearance.
+The background should be plain and the art style should be consistent between both poses.
+"""
+
+            # Generate image using Gemini with reference image
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None,
+                lambda: client.models.generate_content(
+                    model=self.model,
+                    contents=[generation_prompt] + reference_images
+                )
+            )
+
+            # Extract the generated image from response
+            generated_image = self._extract_image_from_response(response)
+
+            if generated_image:
+                self.log_success(
+                    "seed_generation",
+                    entity_type=entity_type,
+                    message="Successfully generated AI seed image with two poses"
+                )
+                return generated_image
+            else:
+                self.log_failure(
+                    "seed_generation",
+                    error="No image generated by AI model",
+                    entity_type=entity_type,
+                )
+                return None
+
         except Exception as e:
             self.log_failure("seed_generation", error=str(e), entity_type=entity_type)
+            return None
+
+    def _extract_image_from_response(self, response) -> Image.Image | None:
+        try:
+            self.logger.info("Extracting image from Gemini response", response_type=type(response).__name__)
+
+            # Try different ways to extract image from Gemini response
+            if hasattr(response, 'candidates') and response.candidates:
+                candidate = response.candidates[0]
+                if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                    for part in candidate.content.parts:
+                        if hasattr(part, 'inline_data') and hasattr(part.inline_data, 'data'):
+                            # Gemini inline_data.data contains raw image bytes, not base64
+                            from io import BytesIO
+                            image_data = part.inline_data.data
+                            image = Image.open(BytesIO(image_data))
+                            self.logger.info("Successfully extracted generated image")
+                            return image
+
+            # Log available attributes for debugging
+            self.logger.warning("Could not extract image", available_attrs=dir(response))
+            return None
+        except Exception as e:
+            self.logger.error("Error extracting image", error=str(e))
             return None

@@ -100,37 +100,35 @@ if user_input := st.chat_input("Tell me about your child...", accept_file="multi
                         reference_images=images_for_agent
                     )
                 )
-                st.markdown(response)
 
-                # Check if response contains structured tool output
-                import json
-                try:
-                    # Try to parse JSON response from tools
-                    if response.strip().startswith('{') and response.strip().endswith('}'):
-                        tool_response = json.loads(response)
+                # Clean up response to remove broken markdown images
+                import re
+                clean_response = re.sub(r'!\[.*?\]\(sandbox:.*?\)', '', response)
+                clean_response = re.sub(r'!\[.*?\]\(/var/.*?\)', '', clean_response)
+                clean_response = clean_response.strip()
 
-                        # Check if it's a seed tool response
-                        if "seed_image_path" in tool_response and tool_response.get("seed_image_path"):
-                            import os
-                            seed_path = tool_response["seed_image_path"]
-                            child_name = tool_response.get("child_name", "your child")
+                # Display the cleaned response
+                st.markdown(clean_response)
 
-                            if os.path.exists(seed_path):
-                                st.write(f"**Here's the character image for {child_name}:**")
-                                st.image(seed_path, caption="Character Seed Image", width=300)
-                                st.write(f"Does this look like {child_name}? Please let me know if I should proceed or if you'd like me to try again!")
-                except (json.JSONDecodeError, KeyError):
-                    # Fallback to original string matching for non-structured responses
-                    if "Generated seed image" in response or "Using your photo" in response:
-                        seed_status = asyncio.run(
-                            st.session_state.agent.session_manager.get_seed_approval_status(st.session_state.session_id)
-                        )
-                        if seed_status["seed_generated"] and seed_status["seed_path"]:
-                            import os
-                            if os.path.exists(seed_status["seed_path"]):
-                                st.write("**Here's the character image I created:**")
-                                st.image(seed_status["seed_path"], caption="Character Seed Image", width=300)
-                                st.write("Does this look like your child? Please let me know if I should proceed or if you'd like me to try again!")
+                # Check if a seed image was generated and display it
+                seed_status = asyncio.run(
+                    st.session_state.agent.session_manager.get_seed_approval_status(st.session_state.session_id)
+                )
+
+                if seed_status["seed_generated"] and seed_status["seed_path"]:
+                    import os
+                    seed_path = seed_status["seed_path"]
+
+                    if os.path.exists(seed_path):
+                        # Check if we've already shown this image
+                        if "displayed_seed_images" not in st.session_state:
+                            st.session_state.displayed_seed_images = set()
+
+                        if seed_path not in st.session_state.displayed_seed_images:
+                            st.write("**Here's the character seed image:**")
+                            st.image(seed_path, caption="Character Seed Image", width=300)
+                            st.write("Does this look like your child? Please let me know if I should proceed or if you'd like me to try again!")
+                            st.session_state.displayed_seed_images.add(seed_path)
 
                 st.session_state.messages.append(
                     {"role": "assistant", "content": response}
