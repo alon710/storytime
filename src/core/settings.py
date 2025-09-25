@@ -35,10 +35,32 @@ class ChatSettings(BaseSettings):
     placeholder: str = Field(default="What would you like to ask the parental consultant?")
 
 
+class ImagesGeneratorToolSettings(BaseSettings):
+    api_key: SecretStr = Field(..., alias="IMAGES_GENERATOR_TOOL_API_KEY")
+    model_name: str = Field("gemini-2.5-flash-image-preview", alias="IMAGES_GENERATOR_TOOL_MODEL_NAME")
+
+    model_config = SettingsConfigDict(
+        env_file=CURRENT_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+
+class ToolsSettings(BaseSettings):
+    images_generator: ImagesGeneratorToolSettings = Field(default_factory=ImagesGeneratorToolSettings)
+
+    model_config = SettingsConfigDict(
+        env_file=CURRENT_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+
 class Settings(BaseSettings):
     conversational_agent: ConversationalAgentSettings = Field(default_factory=ConversationalAgentSettings)
     app: AppSettings = Field(default_factory=AppSettings)
     chat: ChatSettings = Field(default_factory=ChatSettings)
+    tools: ToolsSettings = Field(default_factory=ToolsSettings)
 
     model_config = SettingsConfigDict(
         env_file=CURRENT_DIR / ".env",
