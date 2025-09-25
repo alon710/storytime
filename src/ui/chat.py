@@ -31,11 +31,11 @@ def load_conversation_history():
                 st.markdown(message["content"])
 
 
-def run_chat():
+def render_chat():
     initialize_session_state()
     load_conversation_history()
 
-    if prompt := st.chat_input(settings.chat.placeholder):
+    if prompt := st.chat_input(settings.chat.placeholder, accept_file="multiple"):
         logger.info("User message received.")
         st.chat_message("user").markdown(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})

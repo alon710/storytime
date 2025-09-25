@@ -1,4 +1,4 @@
-from ui.chat import run_chat
+from ui.chat import render_chat
 import streamlit as st
 from core.settings import settings
 from core.logger import logger
@@ -8,4 +8,4 @@ st.title(settings.app.title)
 
 if __name__ == "__main__":
     logger.info("Starting chat application.")
-    run_chat()
+    render_chat()
