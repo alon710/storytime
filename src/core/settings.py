@@ -20,9 +20,9 @@ class ConversationalAgentSettings(BaseSettings):
 
 
 class AppSettings(BaseSettings):
-    name: str = Field(default="Pirate Chat")
-    icon: str = Field(default="🏴‍☠️")
-    title: str = Field(default="Chat with Captain Blackbeard")
+    name: str = Field(default="Children Stories Chat")
+    icon: str = Field(default="👶")
+    title: str = Field(default="Chat with a parental consultant")
 
     model_config = SettingsConfigDict(
         env_file=CURRENT_DIR / ".env",
@@ -32,7 +32,7 @@ class AppSettings(BaseSettings):
 
 
 class ChatSettings(BaseSettings):
-    placeholder: str = Field(default="What would you like to ask the pirate captain?")
+    placeholder: str = Field(default="What would you like to ask the parental consultant?")
 
 
 class Settings(BaseSettings):
