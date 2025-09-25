@@ -5,8 +5,8 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate,
     MessagesPlaceholder,
 )
-from langchain.memory import ConversationBufferMemory
-from langchain_core.runnables import RunnablePassthrough
+from langchain_community.chat_message_histories import SQLChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
 from pydantic import BaseModel
 from typing import Literal
 from core.settings import settings
@@ -28,7 +28,6 @@ class PirateAgent:
             temperature=0.8,
         )
 
-        self.memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
         logger.info("PirateAgent initialized successfully.")
 
         self.prompt = ChatPromptTemplate.from_messages(
@@ -44,28 +43,24 @@ class PirateAgent:
             ]
         )
 
-        self.chain = (
-            RunnablePassthrough.assign(chat_history=lambda x: self.memory.chat_memory.messages) | self.prompt | self.llm
+        base_chain = self.prompt | self.llm
+
+        self.chain = RunnableWithMessageHistory(
+            runnable=base_chain,
+            get_session_history=lambda session_id: SQLChatMessageHistory(
+                session_id=session_id, connection_string="sqlite:///chat_history.db"
+            ),
+            input_messages_key="input",
+            history_messages_key="chat_history",
         )
 
-    def chat(self, message: str) -> ChatResponse:
-        logger.info("Processing chat message.")
+    def chat(self, message: str, session_id: str = "default") -> ChatResponse:
+        logger.info("Processing chat message.", session_id=session_id)
         try:
-            response = self.chain.invoke({"input": message})
-            self.memory.save_context({"input": message}, {"output": response.content})
-            logger.info("Chat response generated successfully.", output_length=len(response.content))
+            config = {"configurable": {"session_id": session_id}}
+            response = self.chain.invoke({"input": message}, config=config)
+            logger.info("Chat response generated successfully.")
             return ChatResponse(message=response.content)
         except Exception as e:
             logger.error("Chat processing failed.", error=str(e), error_type=type(e).__name__)
-            return ChatResponse(message=f"Arrr, something went wrong: {str(e)}", status="error")
-
-    async def achat(self, message: str) -> ChatResponse:
-        logger.info("Processing async chat message.", input_length=len(message))
-        try:
-            response = await self.chain.ainvoke({"input": message})
-            self.memory.save_context({"input": message}, {"output": response.content})
-            logger.info("Async chat response generated successfully.")
-            return ChatResponse(message=response.content)
-        except Exception as e:
-            logger.error("Async chat processing failed.", error=str(e), error_type=type(e).__name__)
             return ChatResponse(message=f"Arrr, something went wrong: {str(e)}", status="error")

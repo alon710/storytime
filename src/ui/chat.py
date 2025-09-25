@@ -1,4 +1,5 @@
 import streamlit as st
+import uuid
 from ai.agent import PirateAgent
 from core.settings import settings
 from core.logger import logger
@@ -8,13 +9,14 @@ def initialize_session_state():
     EMPTY_STATE = {
         "agent": PirateAgent,
         "messages": list,
+        "session_id": lambda: str(uuid.uuid4()),
     }
 
     for key, value in EMPTY_STATE.items():
         if key not in st.session_state:
             st.session_state[key] = value()
 
-    logger.info("Session state initialized.")
+    logger.info("Session state initialized.", session_id=st.session_state.session_id)
 
 
 def load_conversation_history():
@@ -40,8 +42,7 @@ def run_chat():
 
         with st.chat_message("assistant"):
             with st.spinner("Loading..."):
-                logger.info("Processing chat request.")
-                response = st.session_state.agent.chat(prompt)
+                response = st.session_state.agent.chat(prompt, session_id=st.session_state.session_id)
 
             if response.status == "error":
                 logger.error("Agent response error.", error_message=response.message)
