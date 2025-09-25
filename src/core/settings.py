@@ -19,8 +19,26 @@ class ConversationalAgentSettings(BaseSettings):
     )
 
 
+class AppSettings(BaseSettings):
+    name: str = Field(default="Pirate Chat")
+    icon: str = Field(default="🏴‍☠️")
+    title: str = Field(default="Chat with Captain Blackbeard")
+
+    model_config = SettingsConfigDict(
+        env_file=CURRENT_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+
+class ChatSettings(BaseSettings):
+    placeholder: str = Field(default="What would you like to ask the pirate captain?")
+
+
 class Settings(BaseSettings):
     conversational_agent: ConversationalAgentSettings = Field(default_factory=ConversationalAgentSettings)
+    app: AppSettings = Field(default_factory=AppSettings)
+    chat: ChatSettings = Field(default_factory=ChatSettings)
 
     model_config = SettingsConfigDict(
         env_file=CURRENT_DIR / ".env",

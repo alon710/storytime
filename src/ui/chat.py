@@ -1,20 +1,20 @@
 import streamlit as st
 from ai.agent import PirateAgent
+from core.settings import settings
 
 
-def run_chat():
-    st.set_page_config(page_title="Pirate Chat", page_icon="🏴‍☠️")
-    st.title("🏴‍☠️ Chat with Captain Blackbeard")
+def initialize_session_state():
+    EMPTY_STATE = {
+        "agent": PirateAgent,
+        "messages": list,
+    }
 
-    # Initialize the agent
-    if "agent" not in st.session_state:
-        st.session_state.agent = PirateAgent()
+    for key, value in EMPTY_STATE.items():
+        if key not in st.session_state:
+            st.session_state[key] = value()
 
-    # Initialize chat history
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
 
-    # Display chat messages from history
+def load_conversation_history():
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             if message["role"] == "assistant" and message.get("status") == "error":
@@ -22,16 +22,17 @@ def run_chat():
             else:
                 st.markdown(message["content"])
 
-    # React to user input
-    if prompt := st.chat_input("What would you like to ask the pirate captain?"):
-        # Display user message in chat message container
+
+def run_chat():
+    initialize_session_state()
+    load_conversation_history()
+
+    if prompt := st.chat_input(settings.chat.placeholder):
         st.chat_message("user").markdown(prompt)
-        # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        # Get response from agent
         with st.chat_message("assistant"):
-            with st.spinner("Captain is thinking..."):
+            with st.spinner("Loading..."):
                 response = st.session_state.agent.chat(prompt)
 
             if response.status == "error":
@@ -39,5 +40,4 @@ def run_chat():
             else:
                 st.markdown(response.message)
 
-        # Add assistant response to chat history
         st.session_state.messages.append({"role": "assistant", "content": response.message, "status": response.status})
