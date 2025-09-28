@@ -1,13 +1,13 @@
 import streamlit as st
 import uuid
-from ai.agent import PirateAgent
+from ai.agent import ConversationalAgent
 from core.settings import settings
 from core.logger import logger
 
 
 def initialize_session_state():
     EMPTY_STATE = {
-        "agent": PirateAgent,
+        "agent": ConversationalAgent,
         "messages": list,
         "session_id": lambda: str(uuid.uuid4()),
     }
@@ -30,25 +30,41 @@ def load_conversation_history():
             else:
                 st.markdown(message["content"])
 
+                if message.get("images"):
+                    for image_path in message["images"]:
+                        st.image(image_path)
+
 
 def render_chat():
     initialize_session_state()
     load_conversation_history()
 
     if prompt := st.chat_input(settings.chat.placeholder, accept_file="multiple"):
-        logger.info("User message received.")
-        st.chat_message("user").markdown(prompt)
-        st.session_state.messages.append({"role": "user", "content": prompt})
+        text = (prompt.text or "") if hasattr(prompt, "text") else prompt
+        files = prompt.files if hasattr(prompt, "files") else []
+
+        logger.info("User message received.", has_files=bool(files))
+
+        st.chat_message("user").markdown(text)
+        st.session_state.messages.append({"role": "user", "content": text})
 
         with st.chat_message("assistant"):
             with st.spinner("Loading..."):
-                response = st.session_state.agent.chat(prompt, session_id=st.session_state.session_id)
+                response = st.session_state.agent.chat(text, files=files, session_id=st.session_state.session_id)
 
             if response.status == "error":
                 logger.error("Agent response error.", error_message=response.message)
                 st.error(response.message)
             else:
-                logger.info("Agent response successful.")
+                logger.info("Agent response successful.", has_images=bool(response.images))
                 st.markdown(response.message)
 
-        st.session_state.messages.append({"role": "assistant", "content": response.message, "status": response.status})
+                if response.images:
+                    for image_path in response.images:
+                        st.image(image_path)
+
+        message_data = {"role": "assistant", "content": response.message, "status": response.status}
+        if response.images:
+            message_data["images"] = response.images
+
+        st.session_state.messages.append(message_data)
