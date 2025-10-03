@@ -12,7 +12,69 @@ class ConversationalAgentSettings(BaseSettings):
     api_key: SecretStr = Field(..., alias="CONVERSATIONAL_AGENT_API_KEY")
     model_name: str = Field("gpt-5", alias="CONVERSATIONAL_AGENT_MODEL_NAME")
     system_prompt: str = Field(
-        default="Hello! I'm your friendly parental consultant, here to help with all your parenting questions and needs. I love creating magical children's book illustrations for families!\n\nWhen you share photos with me, I'll automatically create beautiful children's book style character reference sheets showing your child in two poses - front view and side view. I use various artistic styles like watercolor, retro mid-century, modern digital, and 3D animation to bring your child's story to life.\n\nI'm here to chat naturally about parenting, answer your questions, and help create wonderful visual memories. Just upload a photo and I'll get to work creating something special, or ask me anything about parenting - I'm here to help!\n\nFor image generation, I'll use sensible defaults (children's book style, square format, warm colors) unless you specifically ask for something different. No need to specify technical details - I've got that covered!"
+        default="""Hello! I'm your personalized children's book creation assistant. I help parents create custom therapeutic storybooks where their child becomes the hero who overcomes real-life challenges.
+
+**HOW IT WORKS - 5-Step Process:**
+
+1. **Challenge Discovery** - We'll have a conversation where I learn about:
+   - Your child's name, age, and any relevant details (gender, interests)
+   - The specific challenge they're facing (fear of dark, starting school, new sibling, etc.)
+   - What positive outcome you hope for
+   - Any additional context that will help the story
+
+2. **Seed Image Creation** - You'll share a photo of your child, and I'll create a beautiful hero-style character reference that captures their likeness in a children's book illustration style. This becomes the visual foundation for the entire book.
+
+3. **Story Narration** - I'll write a complete therapeutic children's book (typically 8 pages) where your child is the main character. The story follows a proven narrative arc:
+   - Introduction to your child's world
+   - The challenge appears
+   - Your child struggles but shows resilience
+   - Your child overcomes using courage and creativity
+   - Celebration and lesson learned
+
+   Each page includes engaging story text and detailed scene descriptions for illustration.
+
+4. **Illustration** - Using the seed image and scene descriptions, I'll generate beautiful, consistent illustrations for each page of the book (coming soon).
+
+5. **PDF Generation** - Finally, I'll create a professionally formatted PDF book that you can print or share digitally (coming soon).
+
+**MY ROLE:**
+- Guide you warmly and supportively through each step
+- Ask thoughtful questions to understand your child's situation
+- Never skip steps or rush the process
+- Explain what's happening at each stage
+- Create age-appropriate, therapeutic content that builds confidence and resilience
+
+**IMPORTANT WORKFLOW RULES:**
+- Steps must be completed in order (no jumping ahead)
+- I'll let you know when we're ready to move to the next step
+- Currently available: Steps 1-3 (Discovery, Seed Image, Narration)
+- Steps 4-5 coming soon (Illustration, PDF)
+
+Let's begin! Tell me about your child and the challenge they're facing, and we'll create something magical together."""
+    )
+    initial_message: str = Field(
+        default="""Welcome! 👋 I'm here to help you create a personalized children's book where your child becomes the hero of their own story.
+
+**Here's how this works:**
+
+📖 **Step 1: Share Your Child's Challenge**
+Tell me about:
+- Your child's name and age
+- What challenge they're facing (fear of the dark, starting school, new sibling, moving, etc.)
+- What positive outcome you hope for
+
+🎨 **Step 2: Upload a Photo**
+Share a clear photo of your child, and I'll create a beautiful hero-style character illustration that will be used throughout the book.
+
+✍️ **Step 3: I'll Write the Story**
+I'll craft a therapeutic 8-page story where your child is the main character who bravely overcomes their challenge. Each page will include engaging text and detailed scene descriptions.
+
+📚 **Coming Soon: Illustrations & PDF**
+Steps 4-5 (page illustrations and PDF generation) are currently in development.
+
+---
+
+**Ready to begin?** Tell me about your child and the challenge they're facing. I'm here to help create something special together! 💙"""
     )
 
     model_config = SettingsConfigDict(
@@ -38,19 +100,45 @@ class ChatSettings(BaseSettings):
     placeholder: str = Field(default="What would you like to ask the parental consultant?")
 
 
-class ImagesGeneratorToolSettings(BaseSettings):
-    api_key: SecretStr = Field(..., alias="IMAGES_GENERATOR_TOOL_API_KEY")
+class SeedImageGeneratorToolSettings(BaseSettings):
+    api_key: SecretStr = Field(..., alias="SEED_IMAGE_GENERATOR_TOOL_API_KEY")
     model_name: str = Field(
-        "models/gemini-2.0-flash-preview-image-generation", alias="IMAGES_GENERATOR_TOOL_MODEL_NAME"
-    )
-    system_prompt: str = Field(
-        default="Create a beautiful children's book style character reference sheet with the child in TWO poses in a SINGLE image: LEFT SIDE shows them facing forward, RIGHT SIDE shows their side profile.\n\nUse a warm, children's book illustration style - choose from watercolor (like Beatrix Potter), retro mid-century (Mary Blair style), modern digital illustration, cinematic 3D animation, or paper cut-out style. The illustration should faithfully preserve the child's facial features, hairstyle, clothing, and proportions, ensuring consistency between both poses.\n\nKey requirements:\n- Both poses show the same child with consistent features, clothing, and proportions\n- Child-friendly, warm, magical atmosphere\n- Clean, simple background for clarity\n- Square format (800x800 pixels)\n- Age-appropriate proportions and features\n- No text or labels in the image\n- Soft, welcoming colors and lighting\n\nThe result should feel like it belongs in a beloved children's storybook!"
+        "models/gemini-2.0-flash-preview-image-generation", alias="SEED_IMAGE_GENERATOR_TOOL_MODEL_NAME"
     )
     tool_description: str = Field(
-        default="Generate children's book style character reference sheets with two poses (front and side view) in various artistic styles including retro mid-century, modern digital, watercolor, 3D animation, paper cut-out, and classic storybook illustrations. Returns a list of base64-encoded images in 800x800 square format."
+        default="Generate a seed character image from the child's photo to use as reference for all book illustrations. Creates a hero-style character in children's book style suitable as a consistent reference throughout the story."
     )
-    temperature: float = Field(default=0.7, alias="IMAGES_GENERATOR_TOOL_TEMPERATURE")
-    max_output_tokens: int = Field(default=8192, alias="IMAGES_GENERATOR_TOOL_MAX_OUTPUT_TOKENS")
+    temperature: float = Field(default=0.7, alias="SEED_IMAGE_GENERATOR_TOOL_TEMPERATURE")
+    max_output_tokens: int = Field(default=8192, alias="SEED_IMAGE_GENERATOR_TOOL_MAX_OUTPUT_TOKENS")
+
+    model_config = SettingsConfigDict(
+        env_file=CURRENT_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+
+class ChallengeDiscoveryToolSettings(BaseSettings):
+    tool_name: str = Field(default="discover_challenge")
+    tool_description: str = Field(
+        default="Capture and structure information about the child's challenge to create a personalized children's book. Use this tool once you have gathered the child's name, age, challenge type/description, and desired outcome from the parent. This is the first step in creating the book."
+    )
+
+    model_config = SettingsConfigDict(
+        env_file=CURRENT_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+
+class NarratorToolSettings(BaseSettings):
+    api_key: SecretStr = Field(..., alias="NARRATOR_TOOL_API_KEY")
+    model_name: str = Field("gpt-4o", alias="NARRATOR_TOOL_MODEL_NAME")
+    tool_description: str = Field(
+        default="Generate the complete book content (title and all pages) based on the child's challenge. Each page includes title, story content, and detailed scene description for illustration. Creates a therapeutic narrative arc where the child is the hero who overcomes their challenge."
+    )
+    temperature: float = Field(default=0.8, alias="NARRATOR_TOOL_TEMPERATURE")
+    max_output_tokens: int = Field(default=4096, alias="NARRATOR_TOOL_MAX_OUTPUT_TOKENS")
 
     model_config = SettingsConfigDict(
         env_file=CURRENT_DIR / ".env",
@@ -60,7 +148,9 @@ class ImagesGeneratorToolSettings(BaseSettings):
 
 
 class ToolsSettings(BaseSettings):
-    images_generator: ImagesGeneratorToolSettings = Field(default_factory=ImagesGeneratorToolSettings)
+    seed_image_generator: SeedImageGeneratorToolSettings = Field(default_factory=SeedImageGeneratorToolSettings)
+    challenge_discovery: ChallengeDiscoveryToolSettings = Field(default_factory=ChallengeDiscoveryToolSettings)
+    narrator: NarratorToolSettings = Field(default_factory=NarratorToolSettings)
 
     model_config = SettingsConfigDict(
         env_file=CURRENT_DIR / ".env",

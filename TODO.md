@@ -69,13 +69,14 @@ This document tracks all tasks needed to transform the current application into 
 
 ## 2. Tools Implementation
 
-### ~~2.1 Basic Image Generation (Generic)~~
+### ~~2.1 Seed Image Generator Tool (was: Basic Image Generation)~~
 **Status**: DONE
-~~Implemented generic image generation tool using Google Gemini with reference image support.~~
+~~Implemented seed image generator tool that creates hero-style character reference from child's photo for use in all book illustrations. Integrated with workflow_state_manager.~~
+**Files**: `src/ai/tools/seed_image_generator.py`, `src/core/settings.py`
 
-### 2.2 Challenge Discovery Tool
-**Status**: TODO
-**Description**: Implement a tool that conducts a conversational discovery process to understand the child's challenge in detail. This tool should extract and structure information from parent's input.
+### ~~2.2 Challenge Discovery Tool~~
+**Status**: DONE
+~~Implemented tool that structures information about the child's challenge with automatic challenge type inference, validation, and workflow state integration.~~
 **Files**: `src/ai/tools/challenge_discovery.py`, `src/core/settings.py`
 **Acceptance Criteria**:
 - Create `discover_challenge` LangChain tool function
@@ -93,10 +94,10 @@ This document tracks all tasks needed to transform the current application into 
 **Dependencies**: 1.6
 **Notes**: This is the first step in the book creation process. The tool itself doesn't need to be conversational - the main agent handles the conversation and calls this tool once it has gathered sufficient information.
 
-### 2.3 Seed Image Generator Tool
-**Status**: TODO
-**Description**: Generate a seed character image from the child's photo that will be used as reference for all subsequent illustrations in the book.
-**Files**: `src/ai/tools/seed_image.py`, `src/core/settings.py`
+### ~~2.3 Seed Image Generator Tool~~
+**Status**: DONE (completed as 2.1)
+~~Completed in task 2.1 - seed image generator creates hero-style character reference with workflow integration.~~
+**Files**: `src/ai/tools/seed_image_generator.py`, `src/core/settings.py`
 **Acceptance Criteria**:
 - Create `generate_seed_image` LangChain tool function
 - Input parameters:
@@ -112,9 +113,9 @@ This document tracks all tasks needed to transform the current application into 
 **Dependencies**: 1.6, 2.2
 **Notes**: This is distinct from the generic image generator. The seed image is specifically designed to be a character reference for the entire book. Consider creating character in neutral pose, front-facing, suitable as reference.
 
-### 2.4 Narrator Tool
-**Status**: TODO
-**Description**: Generate the complete book content (title and all pages) based on the child's challenge. Each page includes title, story content, and scene description for illustration.
+### ~~2.4 Narrator Tool~~
+**Status**: DONE
+~~Generate the complete book content (title and all pages) based on the child's challenge. Each page includes title, story content, and scene description for illustration.~~
 **Files**: `src/ai/tools/narrator.py`, `src/core/settings.py`
 **Acceptance Criteria**:
 - Create `generate_book_content` LangChain tool function
@@ -196,9 +197,9 @@ This document tracks all tasks needed to transform the current application into 
 **Status**: DONE
 ~~Implemented LangChain-based conversational agent with tool calling and chat history.~~
 
-### 3.2 Workflow-Aware Agent System Prompt
-**Status**: TODO
-**Description**: Update the agent's system prompt to understand the book creation workflow and guide parents through each step.
+### ~~3.2 Workflow-Aware Agent System Prompt~~
+**Status**: DONE
+~~Update the agent's system prompt to understand the book creation workflow and guide parents through each step.~~
 **Files**: `src/core/settings.py`, `src/ai/agent.py`
 **Acceptance Criteria**:
 - Create comprehensive system prompt that explains:

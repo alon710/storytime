@@ -16,6 +16,14 @@ def initialize_session_state():
         if key not in st.session_state:
             st.session_state[key] = value()
 
+    # Add initial welcome message if this is a new session (no messages yet)
+    if not st.session_state.messages:
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": settings.conversational_agent.initial_message,
+        })
+        logger.info("Initial welcome message added to session.", session_id=st.session_state.session_id)
+
     logger.info("Session state initialized.", session_id=st.session_state.session_id)
 
 

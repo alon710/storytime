@@ -9,7 +9,9 @@ from core.settings import settings
 from core.logger import logger
 from core.session import session_context
 from core.temp_files import temp_file_manager
-from ai.tools.images import generate_image
+from ai.tools.challenge_discovery import discover_challenge
+from ai.tools.seed_image_generator import generate_seed_image
+from ai.tools.narrator import generate_book_content
 
 
 class ChatResponse(BaseModel):
@@ -28,7 +30,7 @@ class ConversationalAgent:
             temperature=settings.conversational_agent.temperature,
         )
 
-        self.tools = [generate_image]
+        self.tools = [discover_challenge, generate_seed_image, generate_book_content]
 
         logger.info("ConversationalAgent initialized successfully.", tool_count=len(self.tools))
 
