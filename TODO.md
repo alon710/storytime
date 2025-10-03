@@ -22,10 +22,10 @@ This document tracks all tasks needed to transform the current application into 
 **Status**: DONE
 ~~Implemented temp file manager for saving base64 and binary file content with cleanup capabilities.~~
 
-### 1.5 Workflow State Management
-**Status**: TODO
-**Description**: Extend session context to track the book creation workflow state per session, including which tools have been completed, what data each tool produced, and what has been approved by the parent.
-**Files**: `src/core/workflow_state.py`, `src/core/session.py`
+### ~~1.5 Workflow State Management~~
+**Status**: DONE
+~~Implemented workflow state management system with SQLite persistence for tracking book creation workflow per session, including completed tools, produced data, and parent approvals.~~
+**Files**: `src/core/workflow_state.py`, `src/schemas/workflow.py`
 **Acceptance Criteria**:
 - Define `WorkflowStep` type alias:
   - `WorkflowStep = Literal["discovery", "seed_image", "narration", "illustration", "pdf_generation", "completed"]`
@@ -50,38 +50,20 @@ This document tracks all tasks needed to transform the current application into 
 **Dependencies**: 1.1, 1.2, 1.3
 **Notes**: This is critical for the agent to know where in the workflow each session is and make appropriate decisions.
 
-### 1.6 Data Models Library
-**Status**: TODO
-**Description**: Create a centralized module for all Pydantic BaseModels used across tools and agent responses.
-**Files**: `src/models/__init__.py`, `src/models/challenge.py`, `src/models/book.py`, `src/models/tool_responses.py`
+### ~~1.6 Data Schemas Library~~
+**Status**: DONE
+~~Created centralized schemas module with domain-separated Pydantic v2 BaseModels using modern APIs with Field examples for rich documentation.~~
+**Files**: `src/schemas/__init__.py`, `src/schemas/challenge.py`, `src/schemas/book.py`, `src/schemas/workflow.py`, `src/schemas/common.py`
 **Acceptance Criteria**:
-- Define `ChallengeData` BaseModel:
-  - `challenge_type: str` (e.g., "fear of dark", "starting school", "new sibling")
-  - `details: str` (parent's detailed description)
-  - `child_name: str`
-  - `child_age: int`
-  - `child_gender: Optional[str]`
-  - `desired_outcome: str` (what the parent hopes the child will learn/feel)
-  - `additional_context: Optional[str]`
-- Define `BookPage` BaseModel:
-  - `page_number: int`
-  - `title: str`
-  - `story_content: str`
-  - `scene_description: str` (for illustrator)
-  - `illustration_path: Optional[Path]` (from pathlib)
-- Define `BookContent` BaseModel:
-  - `book_title: str`
-  - `pages: list[BookPage]`
-  - `total_pages: int`
-  - `style_guidance: str` (overall artistic style)
-- Define `ToolResponse[T]` generic BaseModel:
-  - `success: bool`
-  - `data: Optional[T]`
-  - `error_message: Optional[str]`
-  - `metadata: dict[str, Any]`
-- All models must use strict typing and validation
+- ✅ In `src/schemas/common.py`: `ToolResponse[T]` generic with `model_config = ConfigDict(arbitrary_types_allowed=True)`
+- ✅ In `src/schemas/challenge.py`: `ChallengeData` with all fields using `Field(examples=[...])`
+- ✅ In `src/schemas/book.py`: `BookPage` and `BookContent` with `Field(examples=[...])` + `@field_validator` for Path
+- ✅ In `src/schemas/workflow.py`: `WorkflowStep` type alias + `WorkflowState` with Field examples and validators
+- ✅ In `src/schemas/__init__.py`: Centralized exports for all schemas
+- ✅ All schemas use Pydantic v2 APIs: `Field(examples=[...])` instead of deprecated `class Config`
+- ✅ Path fields use `Path` from `pathlib` with `@field_validator` for automatic string-to-Path conversion
 **Dependencies**: 1.1
-**Notes**: Centralizing models ensures type safety and consistency across all tools.
+**Notes**: Modern Pydantic v2 with field-level examples (not model-level ConfigDict), ensuring clean, well-documented schemas with excellent IDE support and JSON schema generation.
 
 ---
 
