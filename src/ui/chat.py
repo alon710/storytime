@@ -18,10 +18,12 @@ def initialize_session_state():
 
     # Add initial welcome message if this is a new session (no messages yet)
     if not st.session_state.messages:
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": settings.conversational_agent.initial_message,
-        })
+        st.session_state.messages.append(
+            {
+                "role": "assistant",
+                "content": settings.conversational_agent.initial_message,
+            }
+        )
         logger.info("Initial welcome message added to session.", session_id=st.session_state.session_id)
 
     logger.info("Session state initialized.", session_id=st.session_state.session_id)
@@ -48,8 +50,8 @@ def render_chat():
     load_conversation_history()
 
     if prompt := st.chat_input(settings.chat.placeholder, accept_file="multiple"):
-        text = (prompt.text or "") if hasattr(prompt, "text") else prompt
-        files = prompt.files if hasattr(prompt, "files") else []
+        text: str = prompt.text or ""
+        files: list = prompt.files or []
 
         logger.info("User message received.", has_files=bool(files))
 
@@ -58,7 +60,11 @@ def render_chat():
 
         with st.chat_message("assistant"):
             with st.spinner("Loading..."):
-                response = st.session_state.agent.chat(text, files=files, session_id=st.session_state.session_id)
+                response = st.session_state.agent.chat(
+                    text,
+                    files=files,
+                    session_id=st.session_state.session_id,
+                )
 
             if response.status == "error":
                 logger.error("Agent response error.", error_message=response.message)
