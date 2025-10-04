@@ -9,6 +9,7 @@ from core.settings import settings
 from core.logger import logger
 from core.session import session_context
 from core.temp_files import temp_file_manager
+from core.workflow_state import workflow_state_manager
 from ai.tools.challenge_discovery import discover_challenge
 from ai.tools.seed_image_generator import generate_seed_image
 from ai.tools.narrator import generate_book_content
@@ -86,11 +87,57 @@ class ConversationalAgent:
                             path=temp_path,
                         )
 
+            # Build enhanced message with workflow state context
+            workflow_state = workflow_state_manager.get_workflow_state(session_id)
+
+            # Build workflow context
+            workflow_context_parts = [
+                "\n\n=== WORKFLOW STATE ===",
+                f"Current Step: {workflow_state.current_step}",
+            ]
+
+            # Add completed steps info
+            completed_steps = []
+            if workflow_state.challenge_data:
+                completed_steps.append("✓ discovery (Challenge data captured)")
+            if workflow_state.seed_image_path:
+                completed_steps.append("✓ seed_image (Character reference created)")
+            if workflow_state.book_content:
+                completed_steps.append(f"✓ narration ({workflow_state.book_content.total_pages}-page book written)")
+
+            if completed_steps:
+                workflow_context_parts.append(f"Completed Steps: {', '.join(completed_steps)}")
+            else:
+                workflow_context_parts.append("Completed Steps: None - this is the start of the workflow")
+
+            # Add next step guidance
+            if not workflow_state.challenge_data:
+                workflow_context_parts.append("NEXT ACTION: Use discover_challenge tool to gather child's information")
+            elif not workflow_state.seed_image_path:
+                workflow_context_parts.append("NEXT ACTION: Use generate_seed_image tool with uploaded photo")
+            elif not workflow_state.book_content:
+                workflow_context_parts.append("NEXT ACTION: Use generate_book_content tool to write the story")
+            else:
+                workflow_context_parts.append("NEXT ACTION: Illustration and PDF generation (coming soon)")
+
+            workflow_context = "\n".join(workflow_context_parts)
+
+            # Add available images info
             enhanced_message = message
             available_images = session_context.get_artifacts(session_id, "available_images")
             if available_images:
                 img_paths = ", ".join(available_images)
-                enhanced_message = f"{message}\n\nAvailable images in session: {img_paths}\nWhen generating images, consider using these as reference_images if relevant to the request."
+                enhanced_message = f"{message}\n\nAvailable images: {img_paths}"
+
+            # Combine message with workflow context
+            enhanced_message = f"{enhanced_message}{workflow_context}\n======================\n"
+
+            logger.info(
+                "Enhanced message with workflow context",
+                session_id=session_id,
+                current_step=workflow_state.current_step,
+                completed_steps_count=len(completed_steps),
+            )
 
             config = {"configurable": {"session_id": session_id}}
             response = self.chain.invoke({"input": enhanced_message}, config=config)

@@ -8,14 +8,12 @@ from core.settings import settings
 from core.session import session_context
 from core.workflow_state import workflow_state_manager
 from core.logger import logger
-from schemas.challenge import ChallengeData
 from schemas.book import BookContent, BookPage
 from schemas.common import ToolResponse
 
 
-@tool(description=settings.tools.narrator.tool_description)
+@tool(description="Generate the complete book content (title and all pages) based on the child's challenge. REQUIRES: discover_challenge and generate_seed_image must be completed first. Creates a therapeutic narrative arc where the child is the hero who overcomes their challenge.")
 def generate_book_content(
-    challenge_data_json: str,  # JSON string of ChallengeData
     num_pages: int = 8,
     style_preference: Optional[str] = None,
 ) -> dict:
@@ -24,15 +22,17 @@ def generate_book_content(
     Creates a therapeutic children's book with title, pages, and illustration guidance.
     Each page follows a narrative arc helping the child overcome their challenge.
 
+    IMPORTANT: This tool requires that discover_challenge has been completed first.
+    It retrieves the challenge data from the workflow state automatically.
+
     Args:
-        challenge_data_json: JSON string containing ChallengeData
         num_pages: Number of pages in the book (default 8)
         style_preference: Optional style (e.g., "rhyming", "adventure", "gentle")
 
     Returns:
         dict: Serialized ToolResponse[BookContent] with book content or error
     """
-    session_id = session_context.get_current_session()
+    session_id = session_context.get_current_session() or "default"
 
     logger.info(
         "Book narration started",
@@ -42,9 +42,20 @@ def generate_book_content(
     )
 
     try:
-        # Parse challenge data from JSON
-        challenge_dict = json.loads(challenge_data_json)
-        challenge_data = ChallengeData(**challenge_dict)
+        # Retrieve challenge data from workflow state
+        workflow_state = workflow_state_manager.get_workflow_state(session_id)
+
+        if not workflow_state.challenge_data:
+            error_msg = "Challenge data not found in workflow state. Please complete discover_challenge first."
+            logger.error("Book narration failed - missing challenge data", session_id=session_id)
+            return ToolResponse[BookContent](
+                success=False,
+                data=None,
+                error_message=error_msg,
+                metadata={"session_id": session_id, "required_step": "discover_challenge"},
+            ).model_dump()
+
+        challenge_data = workflow_state.challenge_data
 
         # Validate num_pages
         if num_pages < 4 or num_pages > 20:

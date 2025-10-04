@@ -4,20 +4,19 @@ from langchain_core.tools import tool
 from pathlib import Path
 from typing import Optional
 import base64
+import mimetypes
 
 from core.settings import settings
 from core.session import session_context
 from core.workflow_state import workflow_state_manager
 from core.logger import logger
 from core.temp_files import temp_file_manager
-from schemas.challenge import ChallengeData
 from schemas.common import ToolResponse
 
 
-@tool(description="Generate a seed character image from the child's photo to use as reference for all book illustrations. Creates a hero-style character in children's book style suitable as a consistent reference throughout the story.")
+@tool(description="Generate a seed character image from the child's photo to use as reference for all book illustrations. REQUIRES: discover_challenge must be completed first. Creates a hero-style character in children's book style suitable as a consistent reference throughout the story.")
 def generate_seed_image(
     child_image_path: str,  # LangChain tools work better with str, we convert to Path internally
-    challenge_data_json: str,  # JSON string of ChallengeData
     parent_description: Optional[str] = None,
 ) -> dict:
     """Generate seed character image for the children's book.
@@ -25,15 +24,17 @@ def generate_seed_image(
     Creates a hero-style character reference image from the child's photo that will
     be used as the basis for all subsequent illustrations in the book.
 
+    IMPORTANT: This tool requires that discover_challenge has been completed first.
+    It retrieves the challenge data from the workflow state automatically.
+
     Args:
         child_image_path: Path to the uploaded child photo
-        challenge_data_json: JSON string containing ChallengeData
         parent_description: Optional additional styling requests from parent
 
     Returns:
         dict: Serialized ToolResponse[Path] with seed image path or error
     """
-    session_id = session_context.get_current_session()
+    session_id = session_context.get_current_session() or "default"
     child_path = Path(child_image_path)
 
     logger.info(
@@ -44,10 +45,20 @@ def generate_seed_image(
     )
 
     try:
-        # Parse challenge data from JSON
-        import json
-        challenge_dict = json.loads(challenge_data_json)
-        challenge_data = ChallengeData(**challenge_dict)
+        # Retrieve challenge data from workflow state
+        workflow_state = workflow_state_manager.get_workflow_state(session_id)
+
+        if not workflow_state.challenge_data:
+            error_msg = "Challenge data not found in workflow state. Please complete discover_challenge first."
+            logger.error("Seed image generation failed - missing challenge data", session_id=session_id)
+            return ToolResponse[Path](
+                success=False,
+                data=None,
+                error_message=error_msg,
+                metadata={"session_id": session_id, "required_step": "discover_challenge"},
+            ).model_dump()
+
+        challenge_data = workflow_state.challenge_data
 
         # Validate child image exists
         if not child_path.exists():
@@ -83,10 +94,18 @@ This image will be used as a reference for all subsequent book illustrations to 
         message_content = [{"type": "text", "text": base_prompt}]
 
         if child_path.exists():
+            # Detect MIME type from file
+            mime_type, _ = mimetypes.guess_type(str(child_path))
+            if not mime_type or not mime_type.startswith('image/'):
+                # Default to jpeg if detection fails or not an image
+                mime_type = 'image/jpeg'
+
+            logger.info("Image MIME type detected", mime_type=mime_type, path=str(child_path), session_id=session_id)
+
             with open(child_path, "rb") as f:
                 img_data = base64.b64encode(f.read()).decode()
                 message_content.append(
-                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_data}"}}
+                    {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{img_data}"}}
                 )
 
         # Generate seed image
