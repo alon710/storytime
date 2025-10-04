@@ -4,12 +4,13 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from pydantic import BaseModel
-from typing import Literal, Optional
+from typing import Optional
 from core.settings import settings
 from core.logger import logger
 from core.session import session_context
 from core.temp_files import temp_file_manager
 from core.workflow_state import workflow_state_manager
+from schemas.ui import Status
 from ai.tools.challenge_discovery import discover_challenge
 from ai.tools.seed_image_generator import generate_seed_image
 from ai.tools.narrator import generate_book_content
@@ -18,7 +19,7 @@ from ai.tools.narrator import generate_book_content
 class ChatResponse(BaseModel):
     message: str
     images: list[str] | None = None
-    status: Literal["success", "error"] = "success"
+    status: Status = Status.SUCCESS
 
 
 class ConversationalAgent:
@@ -70,9 +71,8 @@ class ConversationalAgent:
             session_context.set_current_session(session_id)
             artifacts = session_context.get_all_artifacts(session_id)
             session_context.clear_artifacts(session_id)
-            if "available_images" in artifacts:
-                for img_path in artifacts["available_images"]:
-                    session_context.add_artifacts("available_images", img_path)
+            for img_path in artifacts.get("available_images", []):
+                session_context.add_artifacts("available_images", img_path)
 
             if files:
                 logger.info("Processing uploaded files.", file_count=len(files))
@@ -86,11 +86,8 @@ class ConversationalAgent:
                             filename=getattr(file, "name", "unknown"),
                             path=temp_path,
                         )
-
-            # Build enhanced message with workflow state context
             workflow_state = workflow_state_manager.get_workflow_state(session_id)
 
-            # Build workflow context
             workflow_context_parts = [
                 "\n\n=== WORKFLOW STATE ===",
                 f"Current Step: {workflow_state.current_step}",
@@ -147,9 +144,9 @@ class ConversationalAgent:
             return ChatResponse(
                 message=response.get("output", ""),
                 images=artifacts.get("images"),
-                status="success",
+                status=Status.SUCCESS,
             )
 
         except Exception as e:
             logger.error("Chat processing failed.", error=str(e), error_type=type(e).__name__)
-            return ChatResponse(message=f"Something went wrong: {str(e)}", status="error")
+            return ChatResponse(message=f"Something went wrong: {str(e)}", status=Status.ERROR)
