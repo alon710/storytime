@@ -14,7 +14,9 @@ from core.temp_files import temp_file_manager
 from schemas.common import ToolResponse
 
 
-@tool(description="Generate a seed character image from the child's photo to use as reference for all book illustrations. REQUIRES: discover_challenge must be completed first. Creates a hero-style character in children's book style suitable as a consistent reference throughout the story.")
+@tool(
+    description="Generate a seed character image from the child's photo to use as reference for all book illustrations. REQUIRES: discover_challenge must be completed first. Creates a hero-style character in children's book style suitable as a consistent reference throughout the story."
+)
 def generate_seed_image(
     child_image_path: str,  # LangChain tools work better with str, we convert to Path internally
     parent_description: Optional[str] = None,
@@ -76,14 +78,23 @@ def generate_seed_image(
 
 This is a seed character image for a children's book where {challenge_data.child_name} overcomes the challenge of: {challenge_data.challenge_type}.
 
-Style requirements:
-- Children's book illustration style (watercolor, modern digital, or soft painted style)
-- Neutral, confident hero pose - standing front-facing
-- Warm, encouraging, brave expression
-- Age-appropriate proportions for a {challenge_data.child_age}-year-old
-- Clean, simple background
-- Character should look ready for an adventure
-- Preserve the child's key features from the photo (hair, face, clothing style)
+REQUIREMENTS:
+- Synthesize features from all reference images to create a consistent character design
+- Both poses should be consistent - same clothing, hair, and features
+- Clear split composition with both poses in the same image
+- No text or labels in the image
+- Child-friendly, warm, and welcoming style
+- Both poses should be full body or at least torso up
+- Maintain consistent proportions between both poses
+- Apply the specified art style uniformly to both poses
+- Clean white or simple background
+
+COMPOSITION:
+- Single cohesive image with two character poses
+- Left pose: Front view facing forward
+- Right pose: Side profile view
+- Both poses should be clearly visible and well-proportioned
+- Consistent lighting and art style across both poses
 
 This image will be used as a reference for all subsequent book illustrations to maintain character consistency."""
 
@@ -96,9 +107,9 @@ This image will be used as a reference for all subsequent book illustrations to 
         if child_path.exists():
             # Detect MIME type from file
             mime_type, _ = mimetypes.guess_type(str(child_path))
-            if not mime_type or not mime_type.startswith('image/'):
+            if not mime_type or not mime_type.startswith("image/"):
                 # Default to jpeg if detection fails or not an image
-                mime_type = 'image/jpeg'
+                mime_type = "image/jpeg"
 
             logger.info("Image MIME type detected", mime_type=mime_type, path=str(child_path), session_id=session_id)
 
@@ -148,6 +159,10 @@ This image will be used as a reference for all subsequent book illustrations to 
                 seed_image_path=seed_image_path,
             )
             logger.info("Workflow state updated with seed image path", session_id=session_id, path=str(seed_image_path))
+
+            # Add image to session artifacts so it displays to parent
+            session_context.add_artifacts("images", str(seed_image_path), session_id)
+            logger.info("Seed image added to session artifacts for display", session_id=session_id)
         else:
             logger.warning("No session_id available, skipping workflow state update")
 

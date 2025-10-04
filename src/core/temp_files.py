@@ -43,7 +43,7 @@ class TempFileManager:
             try:
                 if os.path.exists(temp_path):
                     os.unlink(temp_path)
-                    logger.debug("Cleaned up temp file", path=temp_path)
+                    logger.info("Cleaned up temp file", path=temp_path)
             except Exception as e:
                 logger.warning("Failed to cleanup temp file", path=temp_path, error=str(e))
 

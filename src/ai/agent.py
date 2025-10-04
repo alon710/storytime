@@ -14,6 +14,7 @@ from schemas.ui import Status
 from ai.tools.challenge_discovery import discover_challenge
 from ai.tools.seed_image_generator import generate_seed_image
 from ai.tools.narrator import generate_book_content
+from ai.tools.approval import approve_step
 
 
 class ChatResponse(BaseModel):
@@ -32,7 +33,7 @@ class ConversationalAgent:
             temperature=settings.conversational_agent.temperature,
         )
 
-        self.tools = [discover_challenge, generate_seed_image, generate_book_content]
+        self.tools = [discover_challenge, generate_seed_image, generate_book_content, approve_step]
 
         logger.info("ConversationalAgent initialized successfully.", tool_count=len(self.tools))
 
@@ -107,13 +108,25 @@ class ConversationalAgent:
             else:
                 workflow_context_parts.append("Completed Steps: None - this is the start of the workflow")
 
-            # Add next step guidance
+            # Add next step guidance with approval checking
             if not workflow_state.challenge_data:
                 workflow_context_parts.append("NEXT ACTION: Use discover_challenge tool to gather child's information")
             elif not workflow_state.seed_image_path:
                 workflow_context_parts.append("NEXT ACTION: Use generate_seed_image tool with uploaded photo")
+            elif workflow_state.seed_image_path and not workflow_state.is_step_approved("seed_image"):
+                workflow_context_parts.append(
+                    "⚠️ WAITING FOR APPROVAL: Seed image generated - present it to parent and ask if they approve before proceeding. "
+                    "If approved, use approve_step tool with step_name='seed_image'. "
+                    "If parent requests changes, call generate_seed_image again with updated parent_description parameter."
+                )
             elif not workflow_state.book_content:
                 workflow_context_parts.append("NEXT ACTION: Use generate_book_content tool to write the story")
+            elif workflow_state.book_content and not workflow_state.is_step_approved("narration"):
+                workflow_context_parts.append(
+                    "⚠️ WAITING FOR APPROVAL: Book content generated - present story to parent and ask if they approve before proceeding. "
+                    "If approved, use approve_step tool with step_name='narration'. "
+                    "If parent requests changes, call generate_book_content again with adjusted parameters."
+                )
             else:
                 workflow_context_parts.append("NEXT ACTION: Illustration and PDF generation (coming soon)")
 

@@ -247,10 +247,10 @@ This document tracks all tasks needed to transform the current application into 
 **Dependencies**: 2.2, 2.3, 2.4, 2.5, 2.6, 3.1
 **Notes**: The agent should have access to all tools but use them in the correct sequence based on workflow state.
 
-### 3.5 Approval Mechanism
-**Status**: TODO
-**Description**: Implement logic for the agent to ask for and track parent approvals at key workflow steps.
-**Files**: `src/ai/agent.py`, `src/core/workflow_state.py`
+### ~~3.5 Approval Mechanism~~
+**Status**: DONE
+~~Implement logic for the agent to ask for and track parent approvals at key workflow steps.~~
+**Files**: `src/ai/agent.py`, `src/core/workflow_state.py`, `src/ai/tools/approval.py`, `src/ai/tools/seed_image_generator.py`, `src/core/settings.py`
 **Acceptance Criteria**:
 - After completing each major step (discovery, seed image, book content, all illustrations, PDF), agent should:
   - Present the result to the parent
