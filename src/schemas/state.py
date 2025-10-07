@@ -7,6 +7,7 @@ from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
 from src.schemas.challenge import ChallengeData
+from src.schemas.seed_image import SeedImageData
 
 
 class Step(Enum):
@@ -18,4 +19,5 @@ class Step(Enum):
 class State(TypedDict, total=False):
     messages: Annotated[list[BaseMessage], add_messages]
     challenge: ChallengeData
+    seed_image: SeedImageData
     current_step: Step = Field(default=Step.CHALLENGE_DISCOVERY)

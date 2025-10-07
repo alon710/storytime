@@ -5,7 +5,7 @@ from src.nodes.seed_image import seed_image_node
 
 
 def route_after_discovery(state: State) -> str:
-    if state["current_step"] == Step.SEED_IMAGE_GENERATION:
+    if state["current_step"] == Step.SEED_IMAGE_GENERATION and state.get("challenge"):
         return "seed_image"
     return END
 
@@ -17,7 +17,7 @@ def _add_nodes(workflow: StateGraph) -> None:
 
 def _add_edges(workflow: StateGraph) -> None:
     workflow.add_edge(START, "challenge_discovery")
-    workflow.add_conditional_edges("challenge_discovery", route_after_discovery)
+    workflow.add_conditional_edges("challenge_discovery", route_after_discovery, {"seed_image": "seed_image", END: END})
     workflow.add_edge("seed_image", END)
 
 

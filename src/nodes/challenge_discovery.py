@@ -1,9 +1,23 @@
-from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from pydantic import ValidationError
 from src.schemas.state import State, Step
 from src.config import settings
 from src.schemas.challenge import ChallengeData
+
+
+def filter_image_content(messages: list) -> list:
+    """Remove image content from messages for models that don't support vision."""
+    filtered = []
+    for msg in messages:
+        if isinstance(msg, HumanMessage) and isinstance(msg.content, list):
+            # Filter out image_url content, keep only text
+            text_content = [item for item in msg.content if item.get("type") == "text"]
+            if text_content:
+                filtered.append(HumanMessage(content=text_content))
+        else:
+            filtered.append(msg)
+    return filtered
 
 
 def validate_required_fields(challenge_data: ChallengeData) -> None:
@@ -28,7 +42,10 @@ def challenge_discovery_node(state: State) -> State:
     )
 
     system_msg = SystemMessage(content=settings.challenge_discovery.system_prompt)
-    messages = [system_msg] + state["messages"]
+
+    # Filter out image content since gpt-4 doesn't support vision
+    filtered_messages = filter_image_content(state["messages"])
+    messages = [system_msg] + filtered_messages
 
     try:
         challenge_data = llm_structured.invoke(input=messages)
@@ -45,10 +62,12 @@ def challenge_discovery_node(state: State) -> State:
             [
                 system_msg,
                 SystemMessage(
-                    content="Ask the parent for missing information in a friendly way. Keep the conversation natural."
+                    content="The parent hasn't provided all required information yet. "
+                    "Ask ONE specific question to gather the missing details. "
+                    "Be warm and friendly. Do NOT provide solutions or mention next steps."
                 ),
             ]
-            + state["messages"]
+            + filtered_messages
         )
 
         return {
