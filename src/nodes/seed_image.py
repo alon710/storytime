@@ -10,7 +10,7 @@ def seed_image_node(state: State) -> State:
     child_name = state.get("child_name", "child")
     child_age = state.get("child_age", 5)
     child_gender = state.get("child_gender", "")
-    challenge = state.get("challenge_description", "")
+    state.get("challenge_description", "")
 
     uploaded_image_url = None
     for msg in reversed(state.get("messages", [])):
@@ -35,7 +35,12 @@ def seed_image_node(state: State) -> State:
     else:
         img_base64 = uploaded_image_url.split(",")[1] if "," in uploaded_image_url else uploaded_image_url
 
-    prompt = f"Create hero-style character illustration of {child_name}, age {child_age}, {child_gender}. For therapeutic children's book about: {challenge}. Style: warm, friendly children's book illustration, simple background."
+    # Use system prompt template from settings
+    art_style_description = "warm, friendly children's book illustration"
+    prompt = settings.seed_image.system_prompt.replace("{{ gender }}", str(child_gender))
+    prompt = prompt.replace("{{ art_style_description }}", art_style_description)
+    prompt = prompt.replace("{{ character_name }}", child_name)
+    prompt = prompt.replace("{{ character_age }}", str(child_age))
 
     llm = ChatGoogleGenerativeAI(
         model=settings.seed_image.model,

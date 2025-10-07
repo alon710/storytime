@@ -6,6 +6,8 @@ from typing_extensions import TypedDict
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
+from src.schemas.challenge import ChallengeData
+
 
 class Step(Enum):
     CHALLENGE_DISCOVERY = "challenge_discovery"
@@ -13,19 +15,7 @@ class Step(Enum):
     COMPLETE = "complete"
 
 
-class Gender(Enum):
-    BOY = "boy"
-    GIRL = "girl"
-
-
 class State(TypedDict, total=False):
     messages: Annotated[list[BaseMessage], add_messages]
+    challenge: ChallengeData
     current_step: Step = Field(default=Step.CHALLENGE_DISCOVERY)
-    child_name: str
-    child_age: int
-    child_gender: Gender
-    challenge_description: str
-    additional_context: str
-
-
-__all__ = ["State"]

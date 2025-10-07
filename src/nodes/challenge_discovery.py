@@ -10,11 +10,11 @@ from src.schemas.challenge import ChallengeData
 def challenge_discovery_node(state: State) -> State:
     llm = ChatOpenAI(
         openai_api_key=settings.openai_api_key,
-        model_name=settings.discovery.model,
-        temperature=settings.discovery.temperature,
+        model_name=settings.challenge_discovery.model,
+        temperature=settings.challenge_discovery.temperature,
     )
 
-    system_msg = SystemMessage(content=settings.discovery.system_prompt)
+    system_msg = SystemMessage(content=settings.challenge_discovery.system_prompt)
 
     filtered_messages = []
     for msg in state["messages"]:

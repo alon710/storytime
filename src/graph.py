@@ -7,16 +7,14 @@ from src.nodes.seed_image import seed_image_node
 def build_graph():
     workflow = StateGraph(State)
 
-    workflow.add_node("discovery", challenge_discovery_node)
+    workflow.add_node("challenge_discovery", challenge_discovery_node)
     workflow.add_node("seed_image", seed_image_node)
 
-    workflow.add_edge(START, "discovery")
-    workflow.add_edge("discovery", "seed_image")
+    workflow.add_edge(START, "challenge_discovery")
+    workflow.add_edge("challenge_discovery", "seed_image")
     workflow.add_edge("seed_image", END)
 
     return workflow.compile()
 
 
 graph = build_graph()
-
-__all__ = ["graph", "build_graph"]
