@@ -2037,8 +2037,6 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
-    { name = "requests" },
-    { name = "structlog" },
 ]
 
 [package.metadata]
@@ -2055,8 +2053,6 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.9" },
     { name = "pydantic-settings", specifier = ">=2.11.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "requests", specifier = ">=2.31.0" },
-    { name = "structlog", specifier = ">=24.0.0" },
 ]
 
 [[package]]

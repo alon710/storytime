@@ -2,8 +2,8 @@ import base64
 import requests
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
-from storytime_agent.state import State
-from storytime_agent.config import settings
+from src.schemas.state import State
+from src.config import settings
 
 
 def seed_image_node(state: State) -> State:

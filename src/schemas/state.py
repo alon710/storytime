@@ -1,10 +1,21 @@
+from enum import Enum
+
 from typing import Annotated
 from pydantic import Field
 from typing_extensions import TypedDict
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
-from storytime_agent.schemas.state import Step, Gender
+
+class Step(Enum):
+    CHALLENGE_DISCOVERY = "challenge_discovery"
+    SEED_IMAGE_GENERATION = "seed_image_generation"
+    COMPLETE = "complete"
+
+
+class Gender(Enum):
+    BOY = "boy"
+    GIRL = "girl"
 
 
 class State(TypedDict, total=False):

@@ -19,3 +19,6 @@ coverage.*
 *.db
 sessions*
 .langgraph_api
+
+# Mac specific
+.DS_Store

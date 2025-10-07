@@ -2,12 +2,12 @@ import json
 import re
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_openai import ChatOpenAI
-from storytime_agent.state import State
-from storytime_agent.config import settings
-from storytime_agent.schemas.challenge import ChallengeData
+from src.schemas.state import State
+from src.config import settings
+from src.schemas.challenge import ChallengeData
 
 
-def discovery_node(state: State) -> State:
+def challenge_discovery_node(state: State) -> State:
     llm = ChatOpenAI(
         openai_api_key=settings.openai_api_key,
         model_name=settings.discovery.model,
