@@ -1,5 +1,4 @@
 from langgraph.graph import StateGraph, END, START
-from langgraph.checkpoint.memory import InMemorySaver
 from src.schemas.state import State
 from src.nodes.challenge_discovery import challenge_discovery_node
 from src.nodes.seed_image import seed_image_node
@@ -15,7 +14,7 @@ def build_graph():
     workflow.add_edge("discovery", "seed_image")
     workflow.add_edge("seed_image", END)
 
-    return workflow.compile(checkpointer=InMemorySaver())
+    return workflow.compile()
 
 
 graph = build_graph()
