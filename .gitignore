@@ -18,3 +18,4 @@ htmlcov/
 coverage.*
 *.db
 sessions*
+.langgraph_api
