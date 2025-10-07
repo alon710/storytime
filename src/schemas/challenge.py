@@ -11,7 +11,7 @@ class Gender(Enum):
 class ChildData(BaseModel):
     name: str
     age: int
-    gender: Gender
+    gender: Gender | None = None
 
 
 class ChallengeData(BaseModel):
