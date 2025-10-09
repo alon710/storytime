@@ -6,7 +6,6 @@ from pydantic import ValidationError
 from src.schemas.state import State, Step
 from src.schemas.seed_image import SeedImageData
 from src.config import settings
-from src.nodes.utils import filter_image_content, extract_image_urls
 from src.nodes.temp_file_handler import get_temp_handler
 
 
@@ -53,11 +52,9 @@ def seed_image_node(state: State) -> State:
     )
 
     system_msg = SystemMessage(content=settings.seed_image.system_prompt)
-
     image_urls = extract_image_urls(state["messages"])
 
     if not image_urls:
-        filtered_messages = filter_image_content(state["messages"])
         follow_up = llm_conversational.invoke(
             [
                 system_msg,
@@ -69,7 +66,7 @@ def seed_image_node(state: State) -> State:
                     "Keep it brief and friendly."
                 ),
             ]
-            + filtered_messages
+            + state["messages"]
         )
 
         return {

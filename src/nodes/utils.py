@@ -1,19 +1,6 @@
 from langchain_core.messages import HumanMessage
 
 
-def filter_image_content(messages: list) -> list:
-    """Filter out image content from messages, keeping only text"""
-    filtered = []
-    for msg in messages:
-        if isinstance(msg, HumanMessage) and isinstance(msg.content, list):
-            text_content = [item for item in msg.content if item.get("type") == "text"]
-            if text_content:
-                filtered.append(HumanMessage(content=text_content))
-        else:
-            filtered.append(msg)
-    return filtered
-
-
 def extract_image_urls(messages: list) -> list[str]:
     """Extract image URLs from messages, supporting both URL and base64 formats"""
     image_urls = []
