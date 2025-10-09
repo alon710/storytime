@@ -4,7 +4,6 @@ from pydantic import ValidationError
 from src.schemas.state import State, Step
 from src.config import settings
 from src.schemas.challenge import ChallengeData
-from src.nodes.utils import filter_image_content
 
 
 def validate_required_fields(challenge_data: ChallengeData) -> None:
@@ -52,9 +51,7 @@ def challenge_discovery_node(state: State) -> State:
     )
 
     system_msg = SystemMessage(content=settings.challenge_discovery.system_prompt)
-
-    filtered_messages = filter_image_content(state["messages"])
-    messages = [system_msg] + filtered_messages
+    messages = [system_msg] + state["messages"]
 
     try:
         challenge_data = llm_structured.invoke(input=messages)
@@ -76,7 +73,7 @@ def challenge_discovery_node(state: State) -> State:
                     "Be warm and friendly. DO NOT provide solutions or mention next steps."
                 ),
             ]
-            + filtered_messages
+            + state["messages"]
         )
 
         return {

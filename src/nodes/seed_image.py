@@ -2,26 +2,23 @@ from base64 import b64decode
 from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
+from pydantic import ValidationError
 from src.schemas.state import State, Step
 from src.schemas.seed_image import SeedImageData
 from src.config import settings
-from src.nodes.utils import classify_approval_intent, ApprovalIntent, filter_image_content, get_approval_llm
+from src.nodes.utils import filter_image_content, extract_image_urls
 from src.nodes.temp_file_handler import get_temp_handler
 
 
-def extract_image_urls(state: State) -> list[str]:
-    image_urls = []
-    for message in state["messages"]:
-        if isinstance(message, HumanMessage) and isinstance(message.content, list):
-            for content_part in message.content:
-                if isinstance(content_part, dict) and content_part.get("type") == "image":
-                    if content_part.get("source_type") == "url":
-                        image_urls.append(content_part.get("url"))
-                    elif content_part.get("source_type") == "base64":
-                        mime_type = content_part.get("mime_type", "image/jpeg")
-                        data = content_part.get("data")
-                        image_urls.append(f"data:{mime_type};base64,{data}")
-    return image_urls
+def validate_required_fields(seed_image_data: SeedImageData) -> None:
+    required_fields: list = [
+        seed_image_data.image_path,
+        seed_image_data.approved,
+    ]
+
+    for value in required_fields:
+        if not value:
+            raise ValidationError("Missing required field")
 
 
 def seed_image_node(state: State) -> State:
@@ -34,78 +31,13 @@ def seed_image_node(state: State) -> State:
             "current_step": Step.COMPLETE,
         }
 
-    if seed_image and not seed_image.approved:
-        if isinstance(last_message, AIMessage):
-            return {
-                **state,
-                "current_step": Step.COMPLETE,
-            }
-
-        llm = get_approval_llm("SEED_IMAGE_APPROVAL_LLM")
-
-        classification = classify_approval_intent(
-            user_message=last_message.content if last_message else "",
-            context="the generated character reference image",
-            llm=llm
-        )
-
-        filtered_messages = filter_image_content(state["messages"])
-
-        if classification.intent == ApprovalIntent.APPROVE:
-            seed_image.approved = True
-            response = llm.invoke([
-                SystemMessage(
-                    content="The parent has approved the character reference image. "
-                    "Thank them warmly and let them know the book is complete. Keep it brief and celebratory."
-                ),
-                *filtered_messages,
-            ])
-            return {
-                **state,
-                "seed_image": seed_image,
-                "messages": state["messages"] + [AIMessage(content=response.content)],
-                "current_step": Step.COMPLETE,
-            }
-
-        elif classification.intent == ApprovalIntent.REJECT:
-            response = llm.invoke([
-                SystemMessage(
-                    content="The parent wants a different character image. "
-                    "Ask them what specifically they'd like to change about the illustration. "
-                    "Be understanding and supportive."
-                ),
-                *filtered_messages,
-            ])
-            return {
-                **state,
-                "seed_image": None,
-                "messages": state["messages"] + [AIMessage(content=response.content)],
-                "current_step": Step.SEED_IMAGE_GENERATION,
-            }
-
-        else:
-            response = llm.invoke([
-                SystemMessage(
-                    content=f"The parent's response about the character illustration was unclear. "
-                    f"The character image is saved at: {seed_image.image_path}\n\n"
-                    "Politely ask them for a clear yes/no on whether they approve the illustration. "
-                    "Be warm and encouraging."
-                ),
-                *filtered_messages,
-            ])
-            return {
-                **state,
-                "messages": state["messages"] + [AIMessage(content=response.content)],
-                "current_step": Step.SEED_IMAGE_GENERATION,
-            }
-
     if isinstance(last_message, AIMessage):
         return {
             **state,
             "current_step": Step.COMPLETE,
         }
 
-    llm_image = ChatGoogleGenerativeAI(
+    llm_structured = ChatGoogleGenerativeAI(
         google_api_key=settings.google_api_key,
         model=settings.seed_image.model,
         temperature=settings.seed_image.temperature,
@@ -115,17 +47,20 @@ def seed_image_node(state: State) -> State:
 
     llm_conversational = ChatOpenAI(
         openai_api_key=settings.openai_api_key,
-        model_name=settings.challenge_discovery.model,
-        temperature=settings.challenge_discovery.temperature,
+        model_name=settings.seed_image.model,
+        temperature=settings.seed_image.temperature,
         name="SEED_IMAGE_CONVERSATIONAL_LLM",
     )
 
-    image_urls = extract_image_urls(state)
+    system_msg = SystemMessage(content=settings.seed_image.system_prompt)
+
+    image_urls = extract_image_urls(state["messages"])
 
     if not image_urls:
         filtered_messages = filter_image_content(state["messages"])
         follow_up = llm_conversational.invoke(
             [
+                system_msg,
                 SystemMessage(
                     content=f"The parent has provided information about their child ({state['challenge'].child.name}, age {state['challenge'].child.age}). "
                     "To create a character reference image, you need at least one photo of the child. "
@@ -133,8 +68,8 @@ def seed_image_node(state: State) -> State:
                     "Explain this will help create a personalized character illustration. "
                     "Keep it brief and friendly."
                 ),
-                *filtered_messages,
             ]
+            + filtered_messages
         )
 
         return {
@@ -151,9 +86,8 @@ def seed_image_node(state: State) -> State:
 
         multimodal_message = HumanMessage(content=content_parts)
 
-        response = llm_image.invoke(
-            [multimodal_message],
-            generation_config=dict(response_modalities=["TEXT", "IMAGE"])
+        response = llm_structured.invoke(
+            [multimodal_message], generation_config=dict(response_modalities=["TEXT", "IMAGE"])
         )
 
         image_base64 = None
@@ -180,37 +114,22 @@ def seed_image_node(state: State) -> State:
             image_path=str(temp_path),
             prompt_used=settings.seed_image.system_prompt,
         )
-
-        filtered_messages = filter_image_content(state["messages"])
-        approval_message = llm_conversational.invoke(
-            [
-                SystemMessage(
-                    content=f"You've just generated a character illustration for {state['challenge'].child.name}. "
-                    f"The image has been saved at {temp_path} and will be shown to the parent. "
-                    "Write a warm, brief message asking the parent to review the character illustration "
-                    "and let you know if they approve it or would like changes. Keep it conversational and friendly."
-                ),
-                *filtered_messages,
-            ]
-        )
+        validate_required_fields(seed_image_data)
 
         return {
             **state,
             "seed_image": seed_image_data,
-            "messages": state["messages"] + [AIMessage(content=approval_message.content)],
             "current_step": Step.SEED_IMAGE_GENERATION,
         }
 
     except Exception as e:
-        filtered_messages = filter_image_content(state["messages"])
         follow_up = llm_conversational.invoke(
             [
+                system_msg,
                 SystemMessage(
                     content=f"There was an issue generating the character image: {str(e)}. "
-                    "Ask the parent to upload a different or clearer photo of their child. "
-                    "Be warm and reassuring. Keep it brief."
+                    "Please let the parent know we'll try again. Be warm and reassuring."
                 ),
-                *filtered_messages,
             ]
         )
 
