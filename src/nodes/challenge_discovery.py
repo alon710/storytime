@@ -1,21 +1,10 @@
-from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
+from langchain_core.messages import SystemMessage, AIMessage
 from langchain_openai import ChatOpenAI
 from pydantic import ValidationError
 from src.schemas.state import State, Step
 from src.config import settings
 from src.schemas.challenge import ChallengeData
-
-
-def filter_image_content(messages: list) -> list:
-    filtered = []
-    for msg in messages:
-        if isinstance(msg, HumanMessage) and isinstance(msg.content, list):
-            text_content = [item for item in msg.content if item.get("type") == "text"]
-            if text_content:
-                filtered.append(HumanMessage(content=text_content))
-        else:
-            filtered.append(msg)
-    return filtered
+from src.nodes.utils import filter_image_content
 
 
 def validate_required_fields(challenge_data: ChallengeData) -> None:
@@ -24,6 +13,7 @@ def validate_required_fields(challenge_data: ChallengeData) -> None:
         challenge_data.child.age,
         challenge_data.child.gender,
         challenge_data.challenge_description,
+        challenge_data.approved,
     ]
 
     for value in required_fields:
@@ -32,16 +22,33 @@ def validate_required_fields(challenge_data: ChallengeData) -> None:
 
 
 def challenge_discovery_node(state: State) -> State:
+    challenge = state.get("challenge")
+    last_message = state["messages"][-1] if state["messages"] else None
+
+    if challenge and challenge.approved:
+        return {
+            **state,
+            "current_step": Step.NARRATION,
+        }
+
+    if isinstance(last_message, AIMessage):
+        return {
+            **state,
+            "current_step": Step.COMPLETE,
+        }
+
     llm_structured = ChatOpenAI(
         openai_api_key=settings.openai_api_key,
         model_name=settings.challenge_discovery.model,
         temperature=settings.challenge_discovery.temperature,
+        name="CHALLENGE_EXTRACTION_LLM",
     ).with_structured_output(ChallengeData)
 
     llm_conversational = ChatOpenAI(
         openai_api_key=settings.openai_api_key,
         model_name=settings.challenge_discovery.model,
         temperature=settings.challenge_discovery.temperature,
+        name="CHALLENGE_CONVERSATIONAL_LLM",
     )
 
     system_msg = SystemMessage(content=settings.challenge_discovery.system_prompt)
@@ -56,7 +63,7 @@ def challenge_discovery_node(state: State) -> State:
         return {
             **state,
             "challenge": challenge_data,
-            "current_step": Step.SEED_IMAGE_GENERATION,
+            "current_step": Step.CHALLENGE_DISCOVERY,
         }
 
     except Exception:
@@ -66,7 +73,7 @@ def challenge_discovery_node(state: State) -> State:
                 SystemMessage(
                     content="The parent hasn't provided all required information yet. "
                     "Ask ONE specific question to gather the missing details. "
-                    "Be warm and friendly. Do NOT provide solutions or mention next steps."
+                    "Be warm and friendly. DO NOT provide solutions or mention next steps."
                 ),
             ]
             + filtered_messages
