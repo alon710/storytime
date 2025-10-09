@@ -2,36 +2,10 @@ import tempfile
 from pathlib import Path
 from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from src.schemas.state import State, Step
 from src.schemas.seed_image import SeedImageData
 from src.config import settings
-
-
-def extract_image_urls(state: State) -> list[str]:
-    image_urls = []
-    for message in state["messages"]:
-        if isinstance(message, HumanMessage) and isinstance(message.content, list):
-            for content_part in message.content:
-                if isinstance(content_part, dict) and content_part.get("type") == "image":
-                    if content_part.get("source_type") == "url":
-                        image_urls.append(content_part.get("url"))
-                    elif content_part.get("source_type") == "base64":
-                        mime_type = content_part.get("mime_type", "image/jpeg")
-                        data = content_part.get("data")
-                        image_urls.append(f"data:{mime_type};base64,{data}")
-    return image_urls
-
-
-def get_art_style_for_age(age: int) -> str:
-    """Determine art style based on child's age."""
-    if age <= 3:
-        return "Simple, bold shapes with bright primary colors. Very minimal details, chunky proportions."
-    elif age <= 5:
-        return "Colorful storybook illustration with friendly characters. Soft lines, expressive faces."
-    elif age <= 8:
-        return "Detailed children's book illustration. Rich colors, engaging expressions, moderate detail."
-    else:
-        return "Chapter book illustration style. More realistic proportions, nuanced expressions, good detail."
 
 
 def seed_image_node(state: State) -> State:
@@ -40,15 +14,17 @@ def seed_image_node(state: State) -> State:
         model=settings.seed_image.model,
         temperature=settings.seed_image.temperature,
         max_output_tokens=settings.seed_image.max_tokens,
+        name="SEED_IMAGE_GENERATION_LLM",
     )
 
-    llm_conversational = ChatGoogleGenerativeAI(
-        google_api_key=settings.google_api_key,
-        model=settings.seed_image.model,
-        temperature=settings.seed_image.temperature,
+    llm_conversational = ChatOpenAI(
+        openai_api_key=settings.openai_api_key,
+        model_name=settings.challenge_discovery.model,
+        temperature=settings.challenge_discovery.temperature,
+        name="SEED_IMAGE_CONVERSATIONAL_LLM",
     )
 
-    image_urls = extract_image_urls(state)
+    image_urls = state
 
     if not image_urls:
         follow_up = llm_conversational.invoke(
@@ -71,9 +47,7 @@ def seed_image_node(state: State) -> State:
         }
 
     try:
-        system_prompt = build_system_prompt(state["challenge"])
-
-        content_parts = [{"type": "text", "text": system_prompt}]
+        content_parts = [{"type": "text", "text": settings.seed_image.system_prompt}]
 
         for image_url in image_urls:
             content_parts.append({"type": "image_url", "image_url": {"url": image_url}})
@@ -87,7 +61,7 @@ def seed_image_node(state: State) -> State:
 
         seed_image_data = SeedImageData(
             image_path=str(temp_path),
-            prompt_used=system_prompt,
+            prompt_used=settings.seed_image.system_prompt,
         )
 
         return {

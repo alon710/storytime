@@ -7,11 +7,9 @@ from src.schemas.challenge import ChallengeData
 
 
 def filter_image_content(messages: list) -> list:
-    """Remove image content from messages for models that don't support vision."""
     filtered = []
     for msg in messages:
         if isinstance(msg, HumanMessage) and isinstance(msg.content, list):
-            # Filter out image_url content, keep only text
             text_content = [item for item in msg.content if item.get("type") == "text"]
             if text_content:
                 filtered.append(HumanMessage(content=text_content))
@@ -21,7 +19,12 @@ def filter_image_content(messages: list) -> list:
 
 
 def validate_required_fields(challenge_data: ChallengeData) -> None:
-    required_fields: list = [challenge_data.child.name, challenge_data.child.age, challenge_data.challenge_description]
+    required_fields: list = [
+        challenge_data.child.name,
+        challenge_data.child.age,
+        challenge_data.child.gender,
+        challenge_data.challenge_description,
+    ]
 
     for value in required_fields:
         if not value:
@@ -43,7 +46,6 @@ def challenge_discovery_node(state: State) -> State:
 
     system_msg = SystemMessage(content=settings.challenge_discovery.system_prompt)
 
-    # Filter out image content since gpt-4 doesn't support vision
     filtered_messages = filter_image_content(state["messages"])
     messages = [system_msg] + filtered_messages
 

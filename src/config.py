@@ -57,27 +57,23 @@ class SeedImageSettings(BaseSettings):
     temperature: float = Field(0.7, alias="SEED_IMAGE_TEMPERATURE")
     max_tokens: int = Field(8192, alias="SEED_IMAGE_MAX_TOKENS")
     system_prompt: str = Field(
-        """STEP 2: Generate Character Reference Sheet
-
-Create a character reference sheet showing the same {{ gender }} in TWO different poses within a SINGLE image:
+        """Generate a character reference sheet showing the child in TWO different poses within a SINGLE image:
 
 LEFT SIDE: Front-facing view (looking directly at camera/viewer)
 RIGHT SIDE: Side profile view (facing to the right)
 
-Art style: {{ art_style_description }}
-Character Name: {{ character_name }}
-Character Age: {{ character_age }} years old
+Use the child's information from the reference photos provided to create a consistent character design.
 
 REQUIREMENTS:
 - Synthesize features from ALL reference images to create a consistent character design
 - Both poses MUST be identical - same clothing, hair, facial features, and proportions
 - Clear split composition with both poses in the same image
 - NO text, labels, or annotations in the image
-- Child-friendly, warm, and welcoming style
+- Child-friendly, warm, and welcoming storybook illustration style
 - Both poses should be full body or at least torso up
 - Maintain consistent proportions between both poses
-- Apply the specified art style uniformly to both poses
 - Clean white or simple background
+- Match the age, gender, and appearance from the reference photos
 
 COMPOSITION:
 - Single cohesive image with two character poses side by side
@@ -86,14 +82,26 @@ COMPOSITION:
 - Both poses clearly visible and well-proportioned
 - Consistent lighting and art style across both poses
 
-CRITICAL: The character MUST appear as a {{ character_age }}-year-old {{ gender }}. All proportions, features, and appearance must reflect this age accurately.
+CRITICAL: The character MUST accurately reflect the child's age, gender, and appearance from the reference images. All proportions, features, and appearance must match.
 
 IMAGE SPECIFICATIONS:
-- Format: SQUARE (1:1 aspect ratio)
 - Dimensions: 800x800 pixels
 - Quality: High resolution for book printing""",
         alias="SEED_IMAGE_SYSTEM_PROMPT",
     )
+
+    model_config = SettingsConfigDict(
+        env_file=ENV_FILE_PATH,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+
+class LangsmithSettings(BaseSettings):
+    tracing: bool = Field(False, alias="LANGSMITH_TRACING")
+    endpoint: str = Field("https://api.smith.langchain.com", alias="LANGSMITH_ENDPOINT")
+    api_key: SecretStr | None = Field(None, alias="LANGSMITH_API_KEY")
+    project: str = Field("storytime", alias="LANGSMITH_PROJECT")
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE_PATH,
@@ -107,6 +115,7 @@ class Settings(BaseSettings):
     google_api_key: SecretStr = Field(alias="GOOGLE_API_KEY")
     challenge_discovery: ChallengeDiscoverySettings = Field(default_factory=ChallengeDiscoverySettings)
     seed_image: SeedImageSettings = Field(default_factory=SeedImageSettings)
+    langsmith: LangsmithSettings = Field(default_factory=LangsmithSettings)
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE_PATH,
