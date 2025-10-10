@@ -1,26 +1,26 @@
-from base64 import b64decode
-from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
+import logging
+from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
-from pydantic import ValidationError
+from langgraph.store.base import BaseStore
 from src.schemas.state import State, Step
 from src.schemas.seed_image import SeedImageData
 from src.config import settings
-from src.nodes.temp_file_handler import get_temp_handler
+from src.nodes.utils import filter_image_content, extract_image_urls
+from src.tools.image_generator import generate_image
+from src.file_store import temp_file_manager
+
+logger = logging.getLogger(__name__)
 
 
 def validate_required_fields(seed_image_data: SeedImageData) -> None:
-    required_fields: list = [
-        seed_image_data.image_path,
-        seed_image_data.approved,
-    ]
-
-    for value in required_fields:
-        if not value:
-            raise ValidationError("Missing required field")
+    """Validate that required fields are present in seed image data"""
+    if not seed_image_data.image_path:
+        raise ValueError("Missing required field: image_path")
 
 
-def seed_image_node(state: State) -> State:
+def seed_image_node(state: State, config: RunnableConfig, *, store: BaseStore) -> State:
+    """Generate seed character image using uploaded photos"""
     seed_image = state.get("seed_image")
     last_message = state["messages"][-1] if state["messages"] else None
 
@@ -36,25 +36,22 @@ def seed_image_node(state: State) -> State:
             "current_step": Step.COMPLETE,
         }
 
-    llm_structured = ChatGoogleGenerativeAI(
-        google_api_key=settings.google_api_key,
-        model=settings.seed_image.model,
-        temperature=settings.seed_image.temperature,
-        max_output_tokens=settings.seed_image.max_tokens,
-        name="SEED_IMAGE_GENERATION_LLM",
-    )
-
+    # Conversational LLM for follow-ups
     llm_conversational = ChatOpenAI(
         openai_api_key=settings.openai_api_key,
-        model_name=settings.seed_image.model,
+        model_name=settings.seed_image.conversational_model,
         temperature=settings.seed_image.temperature,
         name="SEED_IMAGE_CONVERSATIONAL_LLM",
     )
 
     system_msg = SystemMessage(content=settings.seed_image.system_prompt)
+
+    # Extract image URLs from messages
     image_urls = extract_image_urls(state["messages"])
 
     if not image_urls:
+        # No images provided - ask for them
+        filtered_messages = filter_image_content(state["messages"])
         follow_up = llm_conversational.invoke(
             [
                 system_msg,
@@ -66,7 +63,7 @@ def seed_image_node(state: State) -> State:
                     "Keep it brief and friendly."
                 ),
             ]
-            + state["messages"]
+            + filtered_messages
         )
 
         return {
@@ -75,51 +72,54 @@ def seed_image_node(state: State) -> State:
             "current_step": Step.SEED_IMAGE_GENERATION,
         }
 
+    # Generate image using the new tool
     try:
-        content_parts = [{"type": "text", "text": settings.seed_image.system_prompt}]
+        logger.info(f"Generating seed image with {len(image_urls)} reference images")
 
-        for image_url in image_urls:
-            content_parts.append({"type": "image_url", "image_url": {"url": image_url}})
-
-        multimodal_message = HumanMessage(content=content_parts)
-
-        response = llm_structured.invoke(
-            [multimodal_message], generation_config=dict(response_modalities=["TEXT", "IMAGE"])
+        result = generate_image(
+            prompt=settings.seed_image.system_prompt,
+            reference_image_urls=image_urls,
+            api_key=settings.google_api_key.get_secret_value(),
+            model=settings.seed_image.model,
+            temperature=settings.seed_image.temperature,
+            max_output_tokens=settings.seed_image.max_tokens,
         )
 
-        image_base64 = None
-        if isinstance(response.content, list):
-            for part in response.content:
-                if isinstance(part, dict):
-                    if "image_url" in part and "url" in part["image_url"]:
-                        image_data_url = part["image_url"]["url"]
-                        image_base64 = image_data_url.split(",")[-1]
-                        break
-                    elif "inline_data" in part:
-                        image_base64 = part["inline_data"].get("data", "")
-                        break
-            if not image_base64:
-                raise ValueError(f"No image found in response: {response.content}")
-        else:
-            raise ValueError(f"Unexpected response format: {type(response.content)}")
+        # Create temp file from generated image
+        image_path = temp_file_manager.create_temp_file_from_base64(
+            base64_data=result.image_base64, mime_type=result.mime_type, prefix="seed_image_"
+        )
 
-        img_bytes = b64decode(image_base64)
-        temp_handler = get_temp_handler()
-        temp_path = temp_handler.write_bytes(img_bytes, suffix=".png", prefix="seed_image_")
-
+        # Store in state
         seed_image_data = SeedImageData(
-            image_path=str(temp_path),
-            prompt_used=settings.seed_image.system_prompt,
+            image_path=image_path, prompt_used=result.prompt_used, mime_type=result.mime_type
         )
         validate_required_fields(seed_image_data)
+
+        # Create response with embedded image
+        image_base64_str = result.image_base64
+        response_message = AIMessage(
+            content=[
+                {
+                    "type": "text",
+                    "text": f"I've created a character reference image for {state['challenge'].child.name}! Here it is:",
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{result.mime_type};base64,{image_base64_str}"},
+                },
+            ]
+        )
 
         return {
             **state,
             "seed_image": seed_image_data,
+            "messages": state["messages"] + [response_message],
             "current_step": Step.SEED_IMAGE_GENERATION,
         }
 
     except Exception as e:
+        logger.error(f"Error in seed_image_node: {type(e).__name__}: {str(e)}", exc_info=True)
         follow_up = llm_conversational.invoke(
             [
                 system_msg,

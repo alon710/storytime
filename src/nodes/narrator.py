@@ -1,27 +1,27 @@
 from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
-from pydantic import ValidationError
+from langgraph.store.base import BaseStore
 from src.schemas.state import State, Step
 from src.config import settings
 from src.schemas.book import BookData
 
 
 def validate_required_fields(book_data: BookData) -> None:
-    required_fields: list = [
-        book_data.pages,
-        book_data.approved,
-    ]
+    """Validate that required fields are present in book data"""
+    if not book_data.pages:
+        raise ValueError("Missing required field: pages")
 
-    for value in required_fields:
-        if not value:
-            raise ValidationError("Missing required field")
+    for i, page in enumerate(book_data.pages):
+        if not page.title:
+            raise ValueError(f"Missing required field: pages[{i}].title")
+        if not page.content:
+            raise ValueError(f"Missing required field: pages[{i}].content")
+        if not page.scene_description:
+            raise ValueError(f"Missing required field: pages[{i}].scene_description")
 
-    for page in book_data.pages:
-        if not page.title or not page.content or not page.scene_description:
-            raise ValidationError("Missing required page fields")
 
-
-def narrator_node(state: State) -> State:
+def narrator_node(state: State, config: RunnableConfig, *, store: BaseStore) -> State:
     book = state.get("book")
     last_message = state["messages"][-1] if state["messages"] else None
 

@@ -1,26 +1,23 @@
 from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
-from pydantic import ValidationError
+from langgraph.store.base import BaseStore
 from src.schemas.state import State, Step
 from src.config import settings
 from src.schemas.challenge import ChallengeData
 
 
 def validate_required_fields(challenge_data: ChallengeData) -> None:
-    required_fields: list = [
-        challenge_data.child.name,
-        challenge_data.child.age,
-        challenge_data.child.gender,
-        challenge_data.challenge_description,
-        challenge_data.approved,
-    ]
-
-    for value in required_fields:
-        if not value:
-            raise ValidationError("Missing required field")
+    """Validate that required fields are present in challenge data"""
+    if not challenge_data.child.name:
+        raise ValueError("Missing required field: child.name")
+    if not challenge_data.child.age:
+        raise ValueError("Missing required field: child.age")
+    if not challenge_data.challenge_description:
+        raise ValueError("Missing required field: challenge_description")
 
 
-def challenge_discovery_node(state: State) -> State:
+def challenge_discovery_node(state: State, config: RunnableConfig, *, store: BaseStore) -> State:
     challenge = state.get("challenge")
     last_message = state["messages"][-1] if state["messages"] else None
 

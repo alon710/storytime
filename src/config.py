@@ -6,7 +6,7 @@ ENV_FILE_PATH = Path(__file__).parent.parent / ".env"
 
 
 class ChallengeDiscoverySettings(BaseSettings):
-    model: str = Field("gpt-4", alias="CHALLENGE_DISCOVERY_MODEL")
+    model: str = Field("gpt-4o", alias="CHALLENGE_DISCOVERY_MODEL")
     temperature: float = Field(0.7, alias="CHALLENGE_DISCOVERY_TEMPERATURE")
     system_prompt: str = Field(
         """You are a warm, empathetic assistant helping parents create personalized therapeutic children's books.
@@ -106,6 +106,7 @@ Return a structured list of 8 pages with all required fields filled.""",
 
 class SeedImageSettings(BaseSettings):
     model: str = Field("models/gemini-2.5-flash-image", alias="SEED_IMAGE_MODEL")
+    conversational_model: str = Field("gpt-4", alias="SEED_IMAGE_CONVERSATIONAL_MODEL")
     temperature: float = Field(0.7, alias="SEED_IMAGE_TEMPERATURE")
     max_tokens: int = Field(8192, alias="SEED_IMAGE_MAX_TOKENS")
     system_prompt: str = Field(
