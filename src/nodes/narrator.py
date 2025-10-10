@@ -2,13 +2,12 @@ from langchain_core.messages import SystemMessage, AIMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from langgraph.store.base import BaseStore
-from src.schemas.state import State, Step
+from src.schemas.state import State
 from src.config import settings
 from src.schemas.book import BookData
 
 
 def validate_required_fields(book_data: BookData) -> None:
-    """Validate that required fields are present in book data"""
     if not book_data.pages:
         raise ValueError("Missing required field: pages")
 
@@ -21,21 +20,27 @@ def validate_required_fields(book_data: BookData) -> None:
             raise ValueError(f"Missing required field: pages[{i}].scene_description")
 
 
-def narrator_node(state: State, config: RunnableConfig, *, store: BaseStore) -> State:
+def narrator_node(
+    state: State, config: RunnableConfig, *, store: BaseStore
+) -> dict:
+    """
+    Generate therapeutic book content.
+
+    Returns:
+        - "continue": Book approved, move to next step
+        - "retry": Need to regenerate or wait for approval
+        - "complete": End workflow (if last message was AI - avoid loops)
+    """
     book = state.get("book")
     last_message = state["messages"][-1] if state["messages"] else None
 
+    # If book is approved, move to next step
     if book and book.approved:
-        return {
-            **state,
-            "current_step": Step.SEED_IMAGE_GENERATION,
-        }
+        return {"next": "continue"}
 
+    # If last message was from AI, end to avoid loops
     if isinstance(last_message, AIMessage):
-        return {
-            **state,
-            "current_step": Step.COMPLETE,
-        }
+        return {"next": "complete"}
 
     llm_structured = ChatOpenAI(
         openai_api_key=settings.openai_api_key,
@@ -61,9 +66,8 @@ def narrator_node(state: State, config: RunnableConfig, *, store: BaseStore) -> 
         validate_required_fields(book_data)
 
         return {
-            **state,
             "book": book_data,
-            "current_step": Step.NARRATION,
+            "next": "retry",  # Wait for approval
         }
 
     except Exception as e:
@@ -79,7 +83,6 @@ def narrator_node(state: State, config: RunnableConfig, *, store: BaseStore) -> 
         )
 
         return {
-            **state,
-            "messages": state["messages"] + [AIMessage(content=follow_up.content)],
-            "current_step": Step.NARRATION,
+            "messages": [AIMessage(content=follow_up.content)],
+            "next": "retry",  # Stay on this node
         }

@@ -3,7 +3,7 @@ from langchain_core.messages import SystemMessage, AIMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from langgraph.store.base import BaseStore
-from src.schemas.state import State, Step
+from src.schemas.state import State
 from src.schemas.seed_image import SeedImageData
 from src.config import settings
 from src.nodes.utils import filter_image_content, extract_image_urls
@@ -19,24 +19,26 @@ def validate_required_fields(seed_image_data: SeedImageData) -> None:
         raise ValueError("Missing required field: image_path")
 
 
-def seed_image_node(state: State, config: RunnableConfig, *, store: BaseStore) -> State:
-    """Generate seed character image using uploaded photos"""
+def seed_image_node(
+    state: State, config: RunnableConfig, *, store: BaseStore
+) -> dict:
+    """
+    Generate seed character image using uploaded photos.
+
+    Returns:
+        - "continue": Image approved, move to next step (or complete if last step)
+        - "retry": Need to regenerate or wait for approval
+        - "complete": End workflow (if last message was AI - avoid loops)
+    """
     seed_image = state.get("seed_image")
     last_message = state["messages"][-1] if state["messages"] else None
 
     if seed_image and seed_image.approved:
-        return {
-            **state,
-            "current_step": Step.COMPLETE,
-        }
+        return {"next": "complete"}
 
     if isinstance(last_message, AIMessage):
-        return {
-            **state,
-            "current_step": Step.COMPLETE,
-        }
+        return {"next": "complete"}
 
-    # Conversational LLM for follow-ups
     llm_conversational = ChatOpenAI(
         openai_api_key=settings.openai_api_key,
         model_name=settings.seed_image.conversational_model,
@@ -46,11 +48,9 @@ def seed_image_node(state: State, config: RunnableConfig, *, store: BaseStore) -
 
     system_msg = SystemMessage(content=settings.seed_image.system_prompt)
 
-    # Extract image URLs from messages
     image_urls = extract_image_urls(state["messages"])
 
     if not image_urls:
-        # No images provided - ask for them
         filtered_messages = filter_image_content(state["messages"])
         follow_up = llm_conversational.invoke(
             [
@@ -67,12 +67,10 @@ def seed_image_node(state: State, config: RunnableConfig, *, store: BaseStore) -
         )
 
         return {
-            **state,
-            "messages": state["messages"] + [AIMessage(content=follow_up.content)],
-            "current_step": Step.SEED_IMAGE_GENERATION,
+            "messages": [AIMessage(content=follow_up.content)],
+            "next": "retry",
         }
 
-    # Generate image using the new tool
     try:
         logger.info(f"Generating seed image with {len(image_urls)} reference images")
 
@@ -85,18 +83,15 @@ def seed_image_node(state: State, config: RunnableConfig, *, store: BaseStore) -
             max_output_tokens=settings.seed_image.max_tokens,
         )
 
-        # Create temp file from generated image
         image_path = temp_file_manager.create_temp_file_from_base64(
             base64_data=result.image_base64, mime_type=result.mime_type, prefix="seed_image_"
         )
 
-        # Store in state
         seed_image_data = SeedImageData(
             image_path=image_path, prompt_used=result.prompt_used, mime_type=result.mime_type
         )
         validate_required_fields(seed_image_data)
 
-        # Create response with embedded image
         image_base64_str = result.image_base64
         response_message = AIMessage(
             content=[
@@ -112,10 +107,9 @@ def seed_image_node(state: State, config: RunnableConfig, *, store: BaseStore) -
         )
 
         return {
-            **state,
             "seed_image": seed_image_data,
-            "messages": state["messages"] + [response_message],
-            "current_step": Step.SEED_IMAGE_GENERATION,
+            "messages": [response_message],
+            "next": "retry",
         }
 
     except Exception as e:
@@ -131,7 +125,6 @@ def seed_image_node(state: State, config: RunnableConfig, *, store: BaseStore) -
         )
 
         return {
-            **state,
-            "messages": state["messages"] + [AIMessage(content=follow_up.content)],
-            "current_step": Step.SEED_IMAGE_GENERATION,
+            "messages": [AIMessage(content=follow_up.content)],
+            "next": "retry",
         }

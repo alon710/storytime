@@ -2,36 +2,42 @@ from langchain_core.messages import SystemMessage, AIMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from langgraph.store.base import BaseStore
-from src.schemas.state import State, Step
+from src.schemas.state import State
 from src.config import settings
 from src.schemas.challenge import ChallengeData
 
 
 def validate_required_fields(challenge_data: ChallengeData) -> None:
-    """Validate that required fields are present in challenge data"""
-    if not challenge_data.child.name:
-        raise ValueError("Missing required field: child.name")
-    if not challenge_data.child.age:
-        raise ValueError("Missing required field: child.age")
-    if not challenge_data.challenge_description:
-        raise ValueError("Missing required field: challenge_description")
+    fields = {
+        "child_name": challenge_data.child.name,
+        "child_age": challenge_data.child.age,
+        "child_gender": challenge_data.child.gender,
+        "challenge_description": challenge_data.challenge_description,
+        "details_approved": challenge_data.approved,
+    }
+
+    for k, v in fields.items():
+        if not v:
+            raise ValueError(f"Missing required field: {k}")
 
 
-def challenge_discovery_node(state: State, config: RunnableConfig, *, store: BaseStore) -> State:
+def challenge_discovery_node(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
+    """
+    Gather challenge information from the parent.
+
+    Routing logic:
+        - If challenge approved: moves to narrator (via next field)
+        - If needs more info: stays on this node (retry)
+        - If last message was AI: ends workflow (complete)
+    """
     challenge = state.get("challenge")
     last_message = state["messages"][-1] if state["messages"] else None
 
     if challenge and challenge.approved:
-        return {
-            **state,
-            "current_step": Step.NARRATION,
-        }
+        return {"next": "continue"}
 
     if isinstance(last_message, AIMessage):
-        return {
-            **state,
-            "current_step": Step.COMPLETE,
-        }
+        return {"next": "complete"}
 
     llm_structured = ChatOpenAI(
         openai_api_key=settings.openai_api_key,
@@ -55,9 +61,8 @@ def challenge_discovery_node(state: State, config: RunnableConfig, *, store: Bas
         validate_required_fields(challenge_data=challenge_data)
 
         return {
-            **state,
             "challenge": challenge_data,
-            "current_step": Step.CHALLENGE_DISCOVERY,
+            "next": "retry",
         }
 
     except Exception:
@@ -74,7 +79,6 @@ def challenge_discovery_node(state: State, config: RunnableConfig, *, store: Bas
         )
 
         return {
-            **state,
-            "messages": state["messages"] + [AIMessage(content=follow_up.content)],
-            "current_step": Step.CHALLENGE_DISCOVERY,
+            "messages": [AIMessage(content=follow_up.content)],
+            "next": "retry",
         }
