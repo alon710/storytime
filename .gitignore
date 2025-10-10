@@ -16,3 +16,9 @@ wheels/
 htmlcov/
 .tox/
 coverage.*
+*.db
+sessions*
+.langgraph_api
+
+# Mac specific
+.DS_Store

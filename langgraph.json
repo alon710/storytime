@@ -1,0 +1,9 @@
+{
+  "dependencies": [
+    "."
+  ],
+  "graphs": {
+    "storytime_agent": "./src/graph.py:graph"
+  },
+  "env": ".env"
+}
