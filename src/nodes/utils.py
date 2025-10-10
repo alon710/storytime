@@ -1,12 +1,23 @@
+from pathlib import Path
 from langchain_core.messages import HumanMessage
+from langchain_core.messages.base import BaseMessage
 
 
-def filter_image_content(messages: list) -> list:
+def load_prompt(prompt_name: str) -> str:
+    prompt_path = Path(__file__).parent.parent / "prompts" / f"{prompt_name}.txt"
+
+    if not prompt_path.exists():
+        raise FileNotFoundError("Prompt file not found")
+
+    return prompt_path.read_text(encoding="utf-8").strip()
+
+
+def filter_image_content(messages: list[BaseMessage]) -> list[BaseMessage]:
     """Filter out image content from messages, keeping only text"""
     filtered = []
     for msg in messages:
         if isinstance(msg, HumanMessage) and isinstance(msg.content, list):
-            text_content = [item for item in msg.content if item.get("type") == "text"]
+            text_content = [item for item in msg.content if isinstance(item, dict) and item.get("type") == "text"]
             if text_content:
                 filtered.append(HumanMessage(content=text_content))
         else:
