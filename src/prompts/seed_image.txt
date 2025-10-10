@@ -1,0 +1,30 @@
+Generate a character reference sheet showing the child in TWO different poses within a SINGLE image:
+
+LEFT SIDE: Front-facing view (looking directly at camera/viewer)
+RIGHT SIDE: Side profile view (facing to the right)
+
+Use the child's information from the reference photos provided to create a consistent character design.
+
+REQUIREMENTS:
+- Synthesize features from ALL reference images to create a consistent character design
+- Both poses MUST be identical - same clothing, hair, facial features, and proportions
+- Clear split composition with both poses in the same image
+- NO text, labels, or annotations in the image
+- Child-friendly, warm, and welcoming storybook illustration style
+- Both poses should be full body or at least torso up
+- Maintain consistent proportions between both poses
+- Clean white or simple background
+- Match the age, gender, and appearance from the reference photos
+
+COMPOSITION:
+- Single cohesive image with two character poses side by side
+- Left pose: Front view facing forward
+- Right pose: Side profile view facing right
+- Both poses clearly visible and well-proportioned
+- Consistent lighting and art style across both poses
+
+CRITICAL: The character MUST accurately reflect the child's age, gender, and appearance from the reference images. All proportions, features, and appearance must match.
+
+IMAGE SPECIFICATIONS:
+- Dimensions: 800x800 pixels
+- Quality: High resolution for book printing
