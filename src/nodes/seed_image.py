@@ -14,22 +14,17 @@ logger = logging.getLogger(__name__)
 
 
 def validate_required_fields(seed_image_data: SeedImageData) -> None:
-    """Validate that required fields are present in seed image data"""
-    if not seed_image_data.image_path:
-        raise ValueError("Missing required field: image_path")
+    fields = {
+        "img_path": seed_image_data.image_path,
+        "approved": seed_image_data.approved,
+    }
+
+    for k, v in fields.items():
+        if not v:
+            raise ValueError(f"Missing required field: {k}")
 
 
-def seed_image_node(
-    state: State, config: RunnableConfig, *, store: BaseStore
-) -> dict:
-    """
-    Generate seed character image using uploaded photos.
-
-    Returns:
-        - "continue": Image approved, move to next step (or complete if last step)
-        - "retry": Need to regenerate or wait for approval
-        - "complete": End workflow (if last message was AI - avoid loops)
-    """
+def seed_image_node(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
     seed_image = state.get("seed_image")
     last_message = state["messages"][-1] if state["messages"] else None
 

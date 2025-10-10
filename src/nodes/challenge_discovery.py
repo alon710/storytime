@@ -22,14 +22,6 @@ def validate_required_fields(challenge_data: ChallengeData) -> None:
 
 
 def challenge_discovery_node(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
-    """
-    Gather challenge information from the parent.
-
-    Routing logic:
-        - If challenge approved: moves to narrator (via next field)
-        - If needs more info: stays on this node (retry)
-        - If last message was AI: ends workflow (complete)
-    """
     challenge = state.get("challenge")
     last_message = state["messages"][-1] if state["messages"] else None
 
