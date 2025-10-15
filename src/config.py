@@ -39,7 +39,7 @@ class NarratorSettings(BaseSettings):
 
 class SeedImageSettings(BaseSettings):
     model: str = Field("models/gemini-2.5-flash-image", alias="SEED_IMAGE_MODEL")
-    conversational_model: str = Field("gpt-4", alias="SEED_IMAGE_CONVERSATIONAL_MODEL")
+    conversational_model: str = Field("gpt-4o-mini", alias="SEED_IMAGE_CONVERSATIONAL_MODEL")
     temperature: float = Field(0.7, alias="SEED_IMAGE_TEMPERATURE")
     max_tokens: int = Field(8192, alias="SEED_IMAGE_MAX_TOKENS")
     system_prompt: str = Field(
