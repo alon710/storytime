@@ -1,6 +1,10 @@
 from pathlib import Path
-from langchain_core.messages import HumanMessage
+from typing import TypeVar, Type
+from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.messages.base import BaseMessage
+from pydantic import BaseModel
+
+T = TypeVar("T", bound=BaseModel)
 
 
 def load_prompt(prompt_name: str) -> str:
@@ -14,19 +18,28 @@ def load_prompt(prompt_name: str) -> str:
 
 def filter_image_content(messages: list[BaseMessage]) -> list[BaseMessage]:
     """Filter out image content from messages, keeping only text"""
+    from langchain_core.messages import SystemMessage
+
     filtered = []
     for msg in messages:
-        if isinstance(msg, HumanMessage) and isinstance(msg.content, list):
-            text_content = [item for item in msg.content if isinstance(item, dict) and item.get("type") == "text"]
+        content = msg.content if hasattr(msg, "content") else msg.get("content") if isinstance(msg, dict) else None
+
+        if isinstance(content, list):
+            text_content = [item for item in content if isinstance(item, dict) and item.get("type") == "text"]
             if text_content:
-                filtered.append(HumanMessage(content=text_content))
+                if isinstance(msg, HumanMessage) or (isinstance(msg, dict) and msg.get("type") == "human"):
+                    filtered.append(HumanMessage(content=text_content))
+                elif isinstance(msg, AIMessage) or (isinstance(msg, dict) and msg.get("type") == "ai"):
+                    filtered.append(AIMessage(content=text_content))
+                elif isinstance(msg, SystemMessage) or (isinstance(msg, dict) and msg.get("type") == "system"):
+                    filtered.append(SystemMessage(content=text_content))
+
         else:
             filtered.append(msg)
     return filtered
 
 
 def extract_image_urls(messages: list) -> list[str]:
-    """Extract image URLs from messages, supporting both URL and base64 formats"""
     image_urls = []
     for message in messages:
         if isinstance(message, HumanMessage) and isinstance(message.content, list):
@@ -52,3 +65,21 @@ def extract_image_base64_from_response(response_content: list) -> str:
                 return part["inline_data"].get("data", "")
 
     raise ValueError(f"No image found in response: {response_content}")
+
+
+def ensure_pydantic_model(data: T | dict | None, model_class: Type[T]) -> T | None:
+    """
+    Convert dict to Pydantic model if needed (LangGraph deserializes to dict).
+
+    Args:
+        data: Either a Pydantic model instance, dict, or None
+        model_class: The Pydantic model class to convert to
+
+    Returns:
+        Pydantic model instance or None
+    """
+    if data is None:
+        return None
+    if isinstance(data, dict):
+        return model_class(**data)
+    return data

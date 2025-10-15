@@ -2,9 +2,10 @@ from langchain_core.messages import SystemMessage, AIMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from langgraph.store.base import BaseStore
-from src.schemas.state import State
+from src.schemas.state import State, NextAction
 from src.config import settings
 from src.schemas.challenge import ChallengeData
+from src.nodes.utils import ensure_pydantic_model, filter_image_content
 
 
 def validate_required_fields(challenge_data: ChallengeData) -> None:
@@ -22,21 +23,21 @@ def validate_required_fields(challenge_data: ChallengeData) -> None:
 
 
 def challenge_discovery_node(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
-    challenge = state.get("challenge")
+    challenge = ensure_pydantic_model(state.get("challenge"), ChallengeData)
     last_message = state["messages"][-1] if state["messages"] else None
 
     if challenge and challenge.approved:
-        return {"next": "continue"}
+        return {"next_action": NextAction.CONTINUE}
 
     if isinstance(last_message, AIMessage):
-        return {"next": "complete"}
+        return {"next_action": NextAction.END}
 
     llm_structured = ChatOpenAI(
         openai_api_key=settings.openai_api_key,
         model_name=settings.challenge_discovery.model,
         temperature=settings.challenge_discovery.temperature,
         name="CHALLENGE_EXTRACTION_LLM",
-    ).with_structured_output(ChallengeData)
+    ).with_structured_output(schema=ChallengeData)
 
     llm_conversational = ChatOpenAI(
         openai_api_key=settings.openai_api_key,
@@ -54,7 +55,7 @@ def challenge_discovery_node(state: State, config: RunnableConfig, *, store: Bas
 
         return {
             "challenge": challenge_data,
-            "next": "retry",
+            "next_action": NextAction.RETRY,
         }
 
     except Exception:
@@ -67,10 +68,10 @@ def challenge_discovery_node(state: State, config: RunnableConfig, *, store: Bas
                     "Be warm and friendly. DO NOT provide solutions or mention next steps."
                 ),
             ]
-            + state["messages"]
+            + filter_image_content(state["messages"])
         )
 
         return {
             "messages": [AIMessage(content=follow_up.content)],
-            "next": "retry",
+            "next_action": NextAction.RETRY,
         }

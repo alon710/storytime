@@ -2,9 +2,11 @@ from langchain_core.messages import SystemMessage, AIMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from langgraph.store.base import BaseStore
-from src.schemas.state import State
+from src.schemas.state import State, NextAction
 from src.config import settings
 from src.schemas.book import BookData
+from src.schemas.challenge import ChallengeData
+from src.nodes.utils import ensure_pydantic_model
 
 
 def validate_required_fields(book_data: BookData) -> None:
@@ -20,27 +22,16 @@ def validate_required_fields(book_data: BookData) -> None:
             raise ValueError(f"Missing required field: pages[{i}].scene_description")
 
 
-def narrator_node(
-    state: State, config: RunnableConfig, *, store: BaseStore
-) -> dict:
-    """
-    Generate therapeutic book content.
-
-    Returns:
-        - "continue": Book approved, move to next step
-        - "retry": Need to regenerate or wait for approval
-        - "complete": End workflow (if last message was AI - avoid loops)
-    """
-    book = state.get("book")
+def narrator_node(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
+    book = ensure_pydantic_model(state.get("book"), BookData)
+    challenge = ensure_pydantic_model(state.get("challenge"), ChallengeData)
     last_message = state["messages"][-1] if state["messages"] else None
 
-    # If book is approved, move to next step
     if book and book.approved:
-        return {"next": "continue"}
+        return {"next_action": NextAction.CONTINUE}
 
-    # If last message was from AI, end to avoid loops
     if isinstance(last_message, AIMessage):
-        return {"next": "complete"}
+        return {"next_action": NextAction.END}
 
     llm_structured = ChatOpenAI(
         openai_api_key=settings.openai_api_key,
@@ -59,7 +50,7 @@ def narrator_node(
 
     system_msg = SystemMessage(content=settings.narrator.system_prompt)
 
-    user_msg = SystemMessage(content=f"Context: {state.get('challenge')}")
+    user_msg = SystemMessage(content=f"Context: {challenge}")
 
     try:
         book_data = llm_structured.invoke([system_msg, user_msg])
@@ -67,7 +58,7 @@ def narrator_node(
 
         return {
             "book": book_data,
-            "next": "retry",  # Wait for approval
+            "next_action": NextAction.RETRY,
         }
 
     except Exception as e:
@@ -84,5 +75,5 @@ def narrator_node(
 
         return {
             "messages": [AIMessage(content=follow_up.content)],
-            "next": "retry",  # Stay on this node
+            "next_action": NextAction.RETRY,
         }
